@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Deniz's Listening Challenge</title>
+<style>
+:root{--primary:#0ea5e9;--primary-dark:#0284c7;--bg:#f8fafc;--card:#ffffff;--text:#1e293b;--correct:#22c55e;--wrong:#ef4444;--border:#e2e8f0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background-color:var(--bg);color:var(--text);margin:0;padding:16px;display:flex;justify-content:center}
+.app-container{width:100%;max-width:600px;background:var(--card);border-radius:20px;box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1);padding:24px;box-sizing:border-box;margin-bottom:40px}
+h1{text-align:center;font-size:26px;margin-bottom:24px;color:var(--primary-dark)}
+.screen{display:none;animation:fadeIn 0.3s ease-in-out}.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.car-grid{display:grid;grid-template-columns:1fr;gap:12px}@media(min-width:400px){.car-grid{grid-template-columns:1fr 1fr}}
+.car-btn{width:100%;padding:16px;border:2px solid var(--primary);border-radius:14px;background:#f0f9ff;font-size:16px;font-weight:700;color:var(--primary-dark);cursor:pointer;transition:all 0.2s;text-align:center;box-shadow:0 2px 4px rgb(0 0 0 / 0.05)}
+.car-btn:active{transform:scale(0.98)}
+.audio-controls{display:flex;gap:12px;margin-bottom:24px;position:sticky;top:0;background:var(--card);padding:10px 0;border-bottom:2px solid var(--border);z-index:10}
+.audio-btn{flex:1;padding:16px;border:none;border-radius:12px;font-size:16px;font-weight:bold;color:white;cursor:pointer}
+.play-btn{background:var(--correct)}.stop-btn{background:var(--wrong)}
+.question-block{margin-bottom:32px;padding:20px;background:#f8fafc;border-radius:16px;border:1px solid var(--border)}
+.question-text{font-size:18px;font-weight:700;margin-bottom:16px;line-height:1.4}
+.option-btn{width:100%;padding:14px 16px;margin-bottom:10px;border:2px solid var(--border);border-radius:12px;background:white;font-size:16px;font-weight:500;color:var(--text);cursor:pointer;text-align:left;transition:all 0.2s}
+.option-btn.selected-correct{background:var(--correct);color:white;border-color:var(--correct);font-weight:bold}
+.option-btn.selected-wrong{background:var(--wrong);color:white;border-color:var(--wrong)}
+.option-btn:disabled{cursor:default}
+.results-container{display:none;text-align:center;padding:30px 20px;background:#f0fdf4;border:2px solid var(--correct);border-radius:16px;margin-top:30px;animation:fadeIn 0.5s ease-in-out}
+.results-container h2{margin-top:0;color:#166534}
+.stat-row{display:flex;justify-content:space-around;margin:20px 0;font-size:18px}
+.percentage-circle{font-size:36px;font-weight:bold;color:var(--primary-dark);margin:15px 0}
+.menu-btn{width:100%;padding:16px;margin-top:20px;background:var(--text);color:white;border:none;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app-container">
+    <div id="home-screen" class="screen active">
+        <h1>Deniz's Listening Challenge</h1>
+        <p style="text-align:center;margin-bottom:24px;color:#64748b;font-size:16px;">Select a brand, listen carefully, and beat the quiz!</p>
+        <div id="car-list" class="car-grid"></div>
+    </div>
+    <div id="quiz-screen" class="screen">
+        <h1 id="quiz-title">Car Name</h1>
+        <div class="audio-controls">
+            <button class="audio-btn play-btn" onclick="playAudio()">▶️ Play Audio</button>
+            <button class="audio-btn stop-btn" onclick="stopAudio()">⏹️ Stop</button>
+        </div>
+        <div id="questions-container"></div>
+        <div id="results-section" class="results-container">
+            <h2>Quiz Complete!</h2>
+            <div class="percentage-circle" id="score-percentage">100%</div>
+            <div class="stat-row">
+                <div style="color:var(--correct);font-weight:bold;">✅ Correct: <span id="score-correct">0</span></div>
+                <div style="color:var(--wrong);font-weight:bold;">❌ Incorrect: <span id="score-wrong">0</span></div>
+            </div>
+            <p style="font-weight:bold;color:#475569;">Total Questions: <span id="score-total">15</span></p>
+        </div>
+        <button class="menu-btn" onclick="goHome()">⬅ Back to Main Menu</button>
+    </div>
+</div>
+<script>
+const quizData = [
+{brand:"Alfa Romeo",audioUrl:"./Alfa%20Romeo.mp3",questions:[
+{q:"According to the text, why is the triangular front grille important for Alfa Romeo?",options:["It makes the engine run faster during races.","It helps people instantly spot and identify the brand on the road.","It protects the engine from damage better than a square grille."],answer:1},
+{q:"What can we infer about the text describing Alfa Romeo cars as looking 'like art'?",options:["They are only meant to be looked at in museums.","Great care and creativity went into how the outside looks.","They are painted with many different colors by artists."],answer:1},
+{q:"The text mentions that old racing victories 'proved' their engines were strong. What does 'proved' mean here?",options:["Showed clearly that it was true.","Made the engines look more beautiful.","Allowed the company to change its logo."],answer:0},
+{q:"Why do people feel 'connected to the road' when driving an Alfa Romeo?",options:["The car moves so slowly that you feel every bump.","The tires are wider than regular cars.","The steering reacts instantly to the driver's movements."],answer:2},
+{q:"If a car is described as a 'classic Italian machine,' what does this suggest?",options:["It was built hundreds of years ago.","It carries a famous, long-standing tradition of Italian style.","It can only be driven inside Italy."],answer:1},
+{q:"What is the main reason why someone would choose an Alfa Romeo over a 'normal vehicle'?",options:["They want a car that looks and feels unique compared to everyday traffic.","They need the cheapest car available for long trips.","They want a car that has no symbols or logos on it."],answer:0},
+{q:"The text states that Alfa Romeo has a 'history of passion.' In this context, what does 'passion' mean?",options:["A deep love and intense excitement for building and driving cars.","A rule that says cars must be painted red.","The scientific study of how car engines work."],answer:0},
+{q:"What kind of cars does the company focus on making today?",options:["Only large trucks for farmers.","Both speedy sports vehicles and fashionable family cars.","Only electric cars that make no sound."],answer:1},
+{q:"How does the sound of the engine affect the driver according to the text?",options:["It is loud enough to bother other people on the street.","It makes the driving experience highly enjoyable and exciting.","It helps the driver listen to the radio better."],answer:1},
+{q:"Based on the text, who is the primary audience that Alfa Romeo builds cars for?",options:["Drivers who just want to get from one place to another cheaply.","People who genuinely love the emotional thrill of driving.","Construction workers who need to carry heavy tools."],answer:1},
+{q:"True or False: Alfa Romeo was started in a city famous for its beauty.",options:["True","False"],answer:0},
+{q:"True or False: The red cross and green snake logo was recently created to make the car look modern.",options:["True","False"],answer:1},
+{q:"True or False: Alfa Romeo no longer makes cars for families, only for racing tracks.",options:["True","False"],answer:1},
+{q:"True or False: The triangular shape on the front of the car makes it difficult to recognize.",options:["True","False"],answer:1},
+{q:"True or False: The text suggests that driving an Alfa Romeo feels different from driving an ordinary car.",options:["True","False"],answer:0}]},
+{brand:"Audi",audioUrl:"./Audi.mp3",questions:[
+{q:"What is the historical meaning behind the four silver rings in Audi's logo?",options:["They represent the four wheels of a standard car.","They show that four older separate companies came together as one.","They stand for the four seasons of the year when driving is safe."],answer:1},
+{q:"The text describes the Quattro system as an 'invention.' What does 'invention' mean in this context?",options:["A completely new creation or system that did not exist before.","A type of heavy rain or winter storm.","An expensive material used inside the car seats."],answer:0},
+{q:"How does the Quattro system make driving safer in deep snow?",options:["It makes the inside of the car warmer.","It automatically clears the snow off the road.","It gives power to every single wheel at the same time for better grip."],answer:2},
+{q:"Why would a business professional most likely select an Audi over another brand?",options:["It looks respectable, serious, and stylish for their work life.","It is the loudest car available on the market.","It does not use any modern computer technology."],answer:0},
+{q:"The text mentions that Audi uses 'premium materials' and technology inside. What does 'premium' mean?",options:["Very cheap and simple.","High-quality and luxurious.","Old-fashioned and traditional."],answer:1},
+{q:"What is Audi's current strategy regarding the environment?",options:["They are stopping the production of all sports cars immediately.","They are creating new electric vehicles to reduce pollution.","They are only selling cars in places where it never snows."],answer:1},
+{q:"How is the driving experience of an Audi described?",options:["Wild, noisy, and bumpy.","Smooth, calm, and highly comfortable.","Fast, heavy, and difficult to steer."],answer:1},
+{q:"What does the phrase 'reliable German engineering' suggest about the car?",options:["It is built poorly but looks nice.","It is created with dependable and excellent technical skills.","It can only be fixed by engineers who live in Germany."],answer:1},
+{q:"Which type of vehicle is NOT explicitly mentioned as being made by Audi today?",options:["Large family SUVs.","Massive pickup trucks for farming.","Small city cars."],answer:1},
+{q:"What is the main benefit of sending power to all four wheels simultaneously?",options:["It allows the car to fly over deep puddles.","It prevents the car from easily sliding or losing control in bad weather.","It uses less fuel than a two-wheel-drive car."],answer:1},
+{q:"True or False: The four rings in Audi's logo are painted bright gold.",options:["True","False"],answer:1},
+{q:"True or False: The Quattro system is mostly designed to make the car drive faster on completely dry racing tracks.",options:["True","False"],answer:1},
+{q:"True or False: Audi aims to protect the future environment by developing electric vehicles.",options:["True","False"],answer:0},
+{q:"True or False: The interior of an Audi is usually simple and lacks computer screens.",options:["True","False"],answer:1},
+{q:"True or False: Business leaders enjoy Audi because it has an elegant and professional appearance.",options:["True","False"],answer:0}]},
+{brand:"Bentley",audioUrl:"./Bentley.mp3",questions:[
+{q:"What unique combination makes Bentley cars famous around the world?",options:["Being extremely small but very loud.","Being highly comfortable while also possessing great speed.","Being very cheap to buy but difficult to fix."],answer:1},
+{q:"The text notes that almost everything inside a Bentley is 'made by hand.' What does this tell us?",options:["The cars take a very short time to build.","No machines are used to build the metal engines.","Human workers carefully craft the details with high skill."],answer:2},
+{q:"Why did Bentley become highly popular in the 1920s?",options:["Because they started making the cheapest family cars in Europe.","Because they won famous competitive car races in France.","Because they changed their logo to look like a tree."],answer:1},
+{q:"What does the phrase 'symbol of British luxury' mean?",options:["It represents high wealth, high status, and traditional British quality.","It means only citizens of the United Kingdom are allowed to buy it.","It shows that the car is powered by a British engine."],answer:0},
+{q:"Even though Bentley cars are described as 'large and heavy,' how do they behave on highways?",options:["They shake a lot when driving fast.","They move with incredible smoothness and ease.","They require two people to steer them safely."],answer:1},
+{q:"What does it mean if an owner 'appreciates traditional design'?",options:["They want their car to look exactly like a futuristic spaceship.","They value classic, time-tested styles that stay elegant over time.","They prefer cars that are built completely out of plastic."],answer:1},
+{q:"Who are the typical drivers of Bentley cars mentioned in the text?",options:["Regular college students and schoolteachers.","Young children and professional sports racers.","Royalty, famous actors, and wealthy business leaders."],answer:2},
+{q:"The text describes the engine as powerful but says the cars drive 'without making a lot of noise.' Why is this important?",options:["It allows the car to hide from other vehicles on the street.","It creates a peaceful and premium experience for the wealthy passengers.","It proves that the engine is actually very small."],answer:1},
+{q:"What specific materials would you touch inside a new Bentley?",options:["Rough plastic, cold glass, and basic cloth.","Soft leather, expensive wood, and shining metal.","Recycled paper, thick rubber, and stone."],answer:1},
+{q:"The text mentions W.O. Bentley. Who was he?",options:["A famous French race car driver who won in the 1920s.","The hardworking man who started the company in 1919.","A member of the British royal family who bought the first car."],answer:1},
+{q:"True or False: Bentley cars are affordable for the average working-class family.",options:["True","False"],answer:1},
+{q:"True or False: The inside of a Bentley features authentic wood obtained from expensive trees.",options:["True","False"],answer:0},
+{q:"True or False: Bentley's history of winning races took place mostly in the United States.",options:["True","False"],answer:1},
+{q:"True or False: Despite their massive weight, Bentleys travel smoothly at high speeds.",options:["True","False"],answer:0},
+{q:"True or False: Bentley was established right before the start of the 1900s.",options:["True","False"],answer:1}]},
+{brand:"BMW",audioUrl:"./BMW.mp3",questions:[
+{q:"What did BMW produce before they ever started manufacturing cars?",options:["Farm equipment and tractors.","Engines for airplanes.","Racing bicycles for kids."],answer:1},
+{q:"How does BMW's past history explain the design of their blue and white logo?",options:["It looks like a spinning airplane propeller against the clear sky.","It represents the colors of the German national football team flag.","It shows a map of the beautiful city of Milan."],answer:0},
+{q:"If BMW cars are nicknamed the 'ultimate driving machines,' what does 'ultimate' mean here?",options:["The most basic and simple option available.","The highest, greatest, or best example of its kind.","The oldest and most historical version."],answer:1},
+{q:"Why is the interior of a BMW described as 'perfectly organized for the driver'?",options:["It has plenty of space to store a lot of groceries.","All buttons and controls are placed exactly where the driver can easily reach them.","It changes its shape depending on who is driving."],answer:1},
+{q:"What is BMW's primary goal with their new electric vehicles?",options:["To make cars that look exactly like airplanes.","To offer exciting driving experiences without using gasoline to protect nature.","To build cars that can only be driven on sunny days."],answer:1},
+{q:"The name BMW translates to 'Bavarian Motor Works.' What does 'Bavarian' refer to?",options:["The name of the man who invented the airplane engine.","The specific region in Germany where the company started.","A type of fuel that does not damage the environment."],answer:1},
+{q:"What combination of styles makes business professionals choose a BMW?",options:["It looks incredibly cheap and simple at the same time.","It looks highly intelligent, professional, and athletic/sporty.","It looks extremely giant and colorful."],answer:1},
+{q:"What kind of vehicles does BMW produce according to the text?",options:["Only small city hatchbacks and delivery vans.","Comfortable family sedans, large SUVs, and fast sports cars.","Only public buses and heavy military trucks."],answer:1},
+{q:"What does the text imply about someone who 'enjoys spending time on the road'?",options:["They are a person who loves the pure experience of traveling and driving.","They are a construction worker who fixes broken streets.","They are someone who constantly gets stuck in traffic."],answer:0},
+{q:"How does the text describe the sound environment inside a moving BMW?",options:["Quite loud and intense because of the powerful engine.","Very quiet, allowing for a focused and relaxed ride.","Filled with continuous electronic warning alarms."],answer:1},
+{q:"True or False: The letters BMW stand for 'British Motor Works' in English.",options:["True","False"],answer:1},
+{q:"True or False: The company logo uses the colors blue and white.",options:["True","False"],answer:0},
+{q:"True or False: BMW's new electric cars are designed to be calm and boring to save battery power.",options:["True","False"],answer:1},
+{q:"True or False: The text states that BMW focuses heavily on high-quality materials and modern tech.",options:["True","False"],answer:0},
+{q:"True or False: BMW originally built car engines before moving on to airplane parts.",options:["True","False"],answer:1}]},
+{brand:"Bugatti",audioUrl:"./Bugatti.mp3",questions:[
+{q:"The text describes Bugatti as an 'exclusive' sports car. What does 'exclusive' mean here?",options:["It is restricted to a very small, select group of people who can afford it.","It is completely excluded from being driven on public roads.","It is a car that does not include modern safety technology."],answer:0},
+{q:"What point is the author making when they say the Bugatti looks like a 'flying piece of art'?",options:["The car has literal wings attached to its doors.","The design is incredibly smooth, aerodynamic, and beautiful to look at.","The car is so lightweight that it hovers slightly above the ground."],answer:1},
+{q:"Why does a new Bugatti cost several million dollars?",options:["The French government puts a massive tax on the brand.","They use huge engines and are entirely hand-built with the absolute best materials.","The cars are painted with real gold and silver."],answer:1},
+{q:"What does the phrase 'no limits on money or time' suggest about Bugatti's engineers?",options:["They are lazy and take too long to finish building the cars.","They are allowed to spend whatever it takes to build the ultimate, perfect machine.","They frequently run out of money and have to stop working."],answer:1},
+{q:"If the engine has sixteen cylinders, what does this immediately tell the reader?",options:["It is highly fuel-efficient and saves money on gas.","It is massive and produces a shocking amount of power compared to normal cars.","It requires sixteen different people to help build it."],answer:1},
+{q:"Who originally started the company?",options:["A famous athlete who loved driving fast.","A clever designer named Ettore Bugatti.","A wealthy French king."],answer:1},
+{q:"What is owning a Bugatti a 'true symbol' of?",options:["Extreme wealth and ultimate financial success.","A desire to protect the natural environment.","Practical, sensible family planning."],answer:0},
+{q:"What materials are explicitly mentioned as being used inside the cabin?",options:["Hard plastic, basic cloth, and durable rubber.","Soft leather, shining metal, and beautiful details.","Carbon fiber, racing glass, and bare steel."],answer:1},
+{q:"How do newer models like the Chiron compare to the famous Veyron?",options:["They are much slower but more comfortable.","They are capable of reaching even faster speeds.","They are designed to be much cheaper to buy."],answer:1},
+{q:"Based on the text, what is the primary focus of Bugatti as a company?",options:["Pushing the extreme limits of speed, luxury, and engineering.","Creating affordable transportation for everyday workers.","Building heavy vehicles for construction and military use."],answer:0},
+{q:"True or False: Bugatti cars are produced in massive factories using robotic assembly lines.",options:["True","False"],answer:1},
+{q:"True or False: The company was originally founded in France.",options:["True","False"],answer:0},
+{q:"True or False: A Bugatti can comfortably drive over 400 kilometers per hour.",options:["True","False"],answer:0},
+{q:"True or False: The interior of a Bugatti is kept simple and basic to save weight for racing.",options:["True","False"],answer:1},
+{q:"True or False: Bugattis are mostly driven by normal, middle-class business people.",options:["True","False"],answer:1}]},
+{brand:"Buick",audioUrl:"./Buick.mp3",questions:[
+{q:"What is the main reason older people historically liked buying Buicks?",options:["The engines were extremely loud and powerful.","The seats were highly relaxing and the steering required very little effort.","They were the smallest and easiest cars to park in tight spaces."],answer:1},
+{q:"The text says Buick has 'changed its style' today. What is the biggest change?",options:["They stopped making cars and only make trucks now.","They focus on modern SUVs that younger families find exciting and attractive.","They moved their entire company from the US to Europe."],answer:1},
+{q:"What can you infer when the text states that outside noises are 'completely blocked out' in a Buick?",options:["The driver cannot hear emergency sirens at all.","The company uses excellent soundproofing materials to create a peaceful cabin.","The radio is so loud it covers up the sound of the engine."],answer:1},
+{q:"Where outside of the United States is Buick described as being 'extremely popular'?",options:["South Korea","Germany","China"],answer:2},
+{q:"What does the Buick logo look like?",options:["A spinning silver airplane propeller.","Three colorful shields inside a silver circle.","A golden bowtie."],answer:1},
+{q:"How does Buick compare to other luxury car brands in terms of value?",options:["It provides a highly luxurious feeling without charging an extremely high price.","It is the most expensive American car brand ever created.","It is completely free to repair if it breaks."],answer:0},
+{q:"What makes Buick cars 'absolutely perfect' for long family road trips?",options:["They can drive over deep rivers and massive rocks.","They are physically larger, quieter, and extremely comfortable.","They have televisions built into the steering wheel."],answer:1},
+{q:"What larger corporate family is Buick a part of?",options:["Ford Motor Company","General Motors","Bavarian Motor Works."],answer:1},
+{q:"What traditional American characteristic does Buick successfully mix with modern technology?",options:["Aggressive muscle-car speed.","Ultimate, relaxing comfort.","Off-road adventure ability."],answer:1},
+{q:"When was Buick originally started?",options:["1899","1950","2010"],answer:0},
+{q:"True or False: Buick is currently struggling to sell cars in the Chinese market.",options:["True","False"],answer:1},
+{q:"True or False: The brand was traditionally known for having very stiff, heavy steering.",options:["True","False"],answer:1},
+{q:"True or False: Buick is one of the oldest car companies in the United States.",options:["True","False"],answer:0},
+{q:"True or False: Today, Buick primarily manufactures fast, two-door sports cars.",options:["True","False"],answer:1},
+{q:"True or False: Riding in a Buick is meant to be a quiet and relaxing experience.",options:["True","False"],answer:0}]},
+{brand:"Cadillac",audioUrl:"./Cadillac.mp3",questions:[
+{q:"What did people mean when they called Cadillac the 'Standard of the World'?",options:["It was the most average and normal car on the market.","They truly believed it was the absolute highest quality car in existence.","It was the exact same size in every single country."],answer:1},
+{q:"What design feature made 1950s Cadillacs look like 'futuristic rocket ships'?",options:["Large circular windows.","Huge tail fins on the back of the car.","Doors that opened straight up into the sky."],answer:1},
+{q:"What did Elvis Presley's bright pink Cadillac symbolize?",options:["His massive financial success and high social status.","His support for the American military.","His desire to drive quietly and unseen."],answer:0},
+{q:"How does the text describe the design of modern Cadillac vehicles?",options:["Small, cute, and friendly.","Very bold, confident, and sharp-looking.","Round, soft, and invisible in traffic."],answer:1},
+{q:"What is the name of Cadillac's famous, large, and powerful SUV?",options:["The Silverado","The Veyron","The Escalade"],answer:2},
+{q:"If you drive a Cadillac today, why do people 'notice you' according to the text?",options:["Because the exhaust is extremely loud and smoky.","Because the car's bold design commands attention and respect.","Because it is always painted in neon colors."],answer:1},
+{q:"What is Cadillac doing to prepare for the future of transportation?",options:["Building fully electric luxury cars.","Making cars that run on cheap diesel fuel.","Inventing flying cars."],answer:0},
+{q:"What does Cadillac represent in American culture?",options:["Modesty and saving money.","The traditional dream of wealth, success, and high status.","Hard, physical farm labor."],answer:1},
+{q:"Which feature is NOT listed as being part of a new Cadillac?",options:["Comfortable leather seats.","Advanced computer technology.","Hand-cranked wooden windows."],answer:2},
+{q:"Cadillac is an important part of which massive company?",options:["Toyota","General Motors","Chrysler"],answer:1},
+{q:"True or False: In the 1960s, Cadillac cars were built to be extremely tiny to save gas.",options:["True","False"],answer:1},
+{q:"True or False: Elvis Presley was known for buying bright pink Cadillacs.",options:["True","False"],answer:0},
+{q:"True or False: Cadillac is currently ignoring electric vehicle technology.",options:["True","False"],answer:1},
+{q:"True or False: The brand is associated with a wealthy and successful American lifestyle.",options:["True","False"],answer:0},
+{q:"True or False: The Escalade is described as a large and powerful SUV.",options:["True","False"],answer:0}]},
+{brand:"Chevrolet",audioUrl:"./Chevrolet.mp3",questions:[
+{q:"Why does the text describe Chevrolet as making cars 'for everyone'?",options:["They give their cars away for free to people who need them.","They produce a massive variety of vehicles, from small city cars to heavy trucks.","They only build one perfectly average car that fits every driver."],answer:1},
+{q:"What kind of vehicle is the famous Chevrolet Silverado?",options:["A very strong pickup truck for hard work.","An incredibly fast sports car.","A small, cheap electric city car."],answer:0},
+{q:"What shape is the globally famous Chevrolet logo?",options:["A golden bowtie.","A silver star.","Three red diamonds."],answer:0},
+{q:"What does it mean when the text says Chevrolets offer 'great value for your money'?",options:["You get a highly durable, reliable vehicle without spending a massive fortune.","The cars actually go up in price every single year you own them.","The company pays you to test-drive their cars."],answer:0},
+{q:"What is Chevy's specific goal when building new electric cars?",options:["To make them only for the absolute richest people in the world.","To build them mostly for professional race tracks.","To make electric driving affordable and accessible for normal, everyday families."],answer:2},
+{q:"Which two cars are listed as Chevrolet's incredibly fast sports models?",options:["The Escalade and the Pacifica","The Corvette and the Camaro","The Civic and the Accord"],answer:1},
+{q:"What can you infer about Chevrolet from the statement 'you can see them everywhere on the roads in the United States'?",options:["The cars are extremely slow and cause traffic jams.","It is a highly trusted, deeply popular, and heavily purchased brand.","The government forces people to buy them."],answer:1},
+{q:"If a farmer needs to carry heavy tools, what type of Chevy would they most likely buy?",options:["A Corvette","A small city car","A tough pickup truck"],answer:2},
+{q:"What is a common nickname for the Chevrolet brand?",options:["Bak","Chevy","Rolet"],answer:1},
+{q:"Which characteristic is heavily associated with Chevrolet vehicles in the text?",options:["Being extremely fragile and hard to fix.","Being entirely hand-built by skilled artisans.","Being very strong and easy to repair."],answer:2},
+{q:"True or False: Chevrolet is mostly famous for producing high-end luxury vehicles for royalty.",options:["True","False"],answer:1},
+{q:"True or False: The Chevrolet logo resembles a golden bowtie.",options:["True","False"],answer:0},
+{q:"True or False: Chevy's electric cars are designed to be affordable for average people.",options:["True","False"],answer:0},
+{q:"True or False: The Corvette is mentioned as a strong pickup truck for farming.",options:["True","False"],answer:1},
+{q:"True or False: Chevrolets are generally known to be simple to fix when they break.",options:["True","False"],answer:0}]},
+{brand:"Chrysler",audioUrl:"./Chrysler.mp3",questions:[
+{q:"What does the phrase 'big three car makers' imply about Chrysler's history?",options:["It was one of the three smallest and most highly secretive companies in the world.","It was one of the three largest and most powerful automotive companies in the United States.","The company was strictly run by three men from the same family."],answer:1},
+{q:"What was the historic 'Hemi' engine famous for doing?",options:["Saving massive amounts of fuel during city driving.","Making the cars drive extremely fast on the open American highways.","Running entirely on electricity instead of gasoline."],answer:1},
+{q:"How has Chrysler's main focus completely shifted in modern times?",options:["They went from building fast classic cars to focusing on highly comfortable family minivans.","They stopped making cars and now only build parts for airplanes.","They currently focus exclusively on making two-seater sports cars for racing."],answer:0},
+{q:"What type of vehicle is the modern Chrysler Pacifica?",options:["A heavy-duty truck for farm labor.","A fast, loud muscle car.","A large, incredibly safe, and totally modern minivan."],answer:2},
+{q:"Why is the Pacifica described as 'totally perfect' for parents?",options:["It provides a highly relaxing, entertaining, and safe environment for their children.","It is the cheapest vehicle available to buy in America today.","It has absolutely no digital screens, keeping children away from technology."],answer:0},
+{q:"Who was the hardworking founder of the company in 1925?",options:["Henry Ford","Walter Chrysler","Enzo Ferrari"],answer:1},
+{q:"What impact did early Chrysler designs have on the American automotive industry?",options:["They completely and beautifully changed the entire industry.","They were ignored by most people because they looked strange.","They forced the government to build smaller roads."],answer:0},
+{q:"What does the text suggest about modern families who buy Chryslers?",options:["They prefer to drive extremely aggressively in traffic.","They truly love to travel together absolutely everywhere in deep comfort.","They rarely ever leave their hometowns."],answer:1},
+{q:"What specific features make the inside of the Pacifica enjoyable for long summer holidays?",options:["Fun digital screens and very soft seats.","Loud engines and extremely firm racing chairs.","A built-in kitchen and a small bed."],answer:0},
+{q:"The text mentions that Chrysler 'continues to easily provide' a specific experience. What is it?",options:["A highly comfortable and deeply relaxing daily driving experience.","A stressful, fast-paced racing thrill.","A challenging off-road adventure over rocks and mud."],answer:0},
+{q:"True or False: The Chrysler company was originally started in the year 1925.",options:["True","False"],answer:0},
+{q:"True or False: The Hemi was a famous type of comfortable car seat.",options:["True","False"],answer:1},
+{q:"True or False: Chrysler was once considered alongside Ford and General Motors as a top American brand.",options:["True","False"],answer:0},
+{q:"True or False: Today, the Chrysler Pacifica is their most famous vehicle.",options:["True","False"],answer:0},
+{q:"True or False: Modern Chrysler vehicles are specifically designed for professional racers.",options:["True","False"],answer:1}]},
+{brand:"Citroën",audioUrl:"./Citro%C3%ABn.mp3",questions:[
+{q:"Which specific word does the text use to describe Citroën's approach to vehicle design?",options:["Traditional","Boring","Creative"],answer:2},
+{q:"Why was the classic 2CV model absolutely perfect for farmers in the past?",options:["It had a massive engine capable of pulling heavy farm equipment.","It was very cheap, totally simple, and easily drove across rough fields.","It was painted in camouflage colors to hide in the grass."],answer:1},
+{q:"What effect did Citroën's special suspension systems have on the driving experience?",options:["It made the car feel like it was happily floating on a soft cloud over bumpy roads.","It made the car incredibly stiff so it could race around tight corners.","It caused the car to bounce uncontrollably on the highway."],answer:0},
+{q:"According to the company's core belief, what should driving feel like?",options:["A highly competitive and fast-paced challenge.","A comfortable and happy experience, completely free of stress.","A noisy and aggressive event."],answer:1},
+{q:"Where is the Citroën company originally from?",options:["Italy","Germany","France"],answer:2},
+{q:"Who started the company in the year 1919?",options:["Ettore Bugatti","André Citroën","Karl Benz"],answer:1},
+{q:"How do modern Citroën cars physically look today?",options:["Interesting, highly colorful, and very comfortable.","Sharp, aggressive, and painted only in black.","Exactly the same as they did fifty years ago."],answer:0},
+{q:"What does the phrase 'stand out from the normal, boring crowd' mean in this context?",options:["The cars break down so often they are always parked on the side of the street.","The designs are uniquely different and refuse to look like every other car on the road.","The cars are physically taller than any other vehicle."],answer:1},
+{q:"Why do modern Citroën cars have 'special features' inside?",options:["To make daily life easier and far more relaxed for families.","To help the car drive completely underwater.","To make the engine sound like a roaring lion."],answer:0},
+{q:"The brand is described as a 'proud symbol' of what?",options:["Extreme wealth and luxury.","Traditional British racing history.","French engineering and welcoming style."],answer:2},
+{q:"True or False: Citroën vehicles look very similar to almost every other car on the road.",options:["True","False"],answer:1},
+{q:"True or False: The old 2CV model was designed to be highly complicated and expensive.",options:["True","False"],answer:1},
+{q:"True or False: The company logo features a roaring lion.",options:["True","False"],answer:1},
+{q:"True or False: Modern Citroën cars are highly popular among families in Europe.",options:["True","False"],answer:0},
+{q:"True or False: Citroën believes that daily driving should be a highly stressful activity.",options:["True","False"],answer:1}]},
+{brand:"Dodge",audioUrl:"./Dodge.mp3",questions:[
+{q:"What is the clearest definition of a 'muscle car' based on the text?",options:["A small, lightweight car that is incredibly efficient for city parking.","A special vehicle with a massive, loud engine built to drive extremely fast in a straight line.","A completely silent electric car designed for the environment."],answer:1},
+{q:"Who originally started the Dodge company many years ago?",options:["Two brothers named John and Horace.","A team of European racing engineers.","A wealthy American banker."],answer:0},
+{q:"Why does Dodge intentionally use paint colors like bright orange and neon green?",options:["To make the cars completely invisible at night.","To make the cars look highly aggressive, exciting, and proud.","Because those are the only paint colors available in America."],answer:1},
+{q:"How does the text accurately describe the sound of a classic Dodge engine?",options:["Remarkably loud, deep, and completely proud.","High-pitched and incredibly quiet.","Smooth, silent, and entirely peaceful."],answer:0},
+{q:"While many other car brands are trying to be quiet and calm, what is Dodge doing?",options:["Focusing entirely on extreme luxury and soft leather.","Remaining loud, aggressive, and completely focused on high performance.","Building only small, slow family vans."],answer:1},
+{q:"What type of vehicle does Dodge build for families who still want a sporty feeling?",options:["Very large, extremely strong SUVs.","Tiny two-door hatchbacks.","Heavy-duty farming tractors."],answer:0},
+{q:"Name the two most famous Dodge muscle car models mentioned in the text.",options:["The Mustang and the Camaro","The Charger and the Challenger","The Civic and the Accord"],answer:1},
+{q:"What emotional experience does Dodge focus entirely on delivering?",options:["Total peace, deep relaxation, and silence.","The pure, thrilling excitement of traditional horsepower and speed.","The safest, slowest commute to work possible."],answer:1},
+{q:"If you hear a remarkably deep engine rumble on an American street, what does the text state it often is?",options:["A Dodge","A Bentley","A Buick"],answer:0},
+{q:"What nationality is the Dodge car company?",options:["German","Italian","American"],answer:2},
+{q:"True or False: Dodge is globally famous for producing small, quiet electric vehicles.",options:["True","False"],answer:1},
+{q:"True or False: Muscle cars are specifically designed to drive incredibly fast in a straight line.",options:["True","False"],answer:0},
+{q:"True or False: The brand frequently uses bright, neon paint colors.",options:["True","False"],answer:0},
+{q:"True or False: Dodge completely avoids making SUVs for families.",options:["True","False"],answer:1},
+{q:"True or False: The company heavily prioritizes the thrill of high performance over a calm driving experience.",options:["True","False"],answer:0}]},
+{brand:"Ferrari",audioUrl:"./Ferrari.mp3",questions:[
+{q:"Why does the text state that a Ferrari is NOT designed for 'everyday driving to the supermarket'?",options:["The trunk is too big for grocery bags.","It is extremely loud, incredibly fast, and intended for racing or showing off wealth.","The car physically cannot be driven at slow speeds."],answer:1},
+{q:"What specific animal is proudly featured in the famous company logo?",options:["A golden bull.","A fast silver cat.","A strong black horse standing on its back legs."],answer:2},
+{q:"What famous professional racing championship is Ferrari extremely successful in?",options:["World Rally Championship","Formula 1","Off-Road Desert Racing"],answer:1},
+{q:"What does the phrase 'beautiful, rolling piece of mechanical art' suggest about a Ferrari?",options:["It is engineered and designed so perfectly that it looks like a masterpiece in motion.","The car is extremely fragile and breaks if it is driven in the rain.","The parts are simply glued together by artists instead of mechanics."],answer:0},
+{q:"What specific color are almost all Ferrari cars traditionally and beautifully painted?",options:["A special, bright red.","Deep metallic blue.","Neon green."],answer:0},
+{q:"Who is the legendary original founder of this Italian company?",options:["Ettore Bugatti","Enzo Ferrari","Ferruccio Lamborghini"],answer:1},
+{q:"What inevitably happens every single time a Ferrari drives down a public street?",options:["People cover their ears because the engine is broken.","People immediately stop what they are doing and simply stare at it.","The police pull it over for driving too slowly."],answer:1},
+{q:"What does owning a Ferrari represent as the 'ultimate life dream' for millions of people?",options:["Pure practicality, saving money, and family safety.","Extreme speed, beautiful art, and true Italian passion.","The ability to carry massive amounts of heavy cargo."],answer:1},
+{q:"How are Ferrari cars mechanically built, according to the text?",options:["Using the absolute finest materials and the most advanced racing technology available.","Using completely recycled, cheap materials to keep the cost down.","Hand-carved entirely out of expensive wood."],answer:0},
+{q:"Where is the incredibly famous Ferrari company strictly located?",options:["Spain","Germany","Italy"],answer:2},
+{q:"True or False: Ferrari cars are highly practical and perfect for simple, daily errands.",options:["True","False"],answer:1},
+{q:"True or False: The company logo features a strong black horse.",options:["True","False"],answer:0},
+{q:"True or False: Ferrari has won numerous important world championships in Formula 1 racing.",options:["True","False"],answer:0},
+{q:"True or False: Buying a Ferrari is generally considered quite cheap and affordable.",options:["True","False"],answer:1},
+{q:"True or False: The text compares seeing a Ferrari on the street to looking at a piece of art.",options:["True","False"],answer:0}]},
+{brand:"Ford",audioUrl:"./Ford.mp3",questions:[
+{q:"What incredibly important system did Henry Ford brilliantly invent?",options:["The very first gasoline car engine in history.","The moving assembly line to build cars quickly.","The electric battery for modern trucks."],answer:1},
+{q:"Because of Henry Ford's famous invention, what were normal, everyday working people finally able to do?",options:["Buy his famous Model T car because it became much cheaper to build.","Fly in airplanes across the United States.","Work from their homes without traveling to a factory."],answer:0},
+{q:"What is the absolute most famous and best-selling vehicle Ford makes in America today?",options:["The Ford Mustang","The Model T","The F-150 pickup truck"],answer:2},
+{q:"If Ford vehicles are described as 'highly practical,' what does this mean?",options:["They are built only for showing off in movies.","They are extremely useful, sensible, and completely ready for hard, daily work.","They are too fragile to be driven in the rain or snow."],answer:1},
+{q:"Which legendary sports car is loved by millions and manufactured by Ford?",options:["The Corvette","The Camaro","The Mustang"],answer:2},
+{q:"Who are the primary types of people that fully trust the Ford brand?",options:["Only European royalty and famous actors.","Families, farmers, and construction workers.","Only professional race car drivers on closed tracks."],answer:1},
+{q:"What is Ford currently investing heavily in for the future?",options:["Steam-powered engines.","Brand new electric trucks and cars.","Three-wheeled motorcycles."],answer:1},
+{q:"According to the text, what massive global impact did the Ford company have?",options:["It completely changed how the entire world travels and lives.","It proved that cars were too dangerous to drive.","It created the first highway system in Europe."],answer:0},
+{q:"In what year was the Ford company officially started?",options:["1886","1903","1950"],answer:1},
+{q:"The text describes Ford's history as 'deeply important.' Why is it deeply important?",options:["Because it made cars available to the masses, not just the rich.","Because it won a war using only cars.","Because it was the first company to paint cars blue."],answer:0},
+{q:"True or False: Henry Ford invented the very first automobile in the world.",options:["True","False"],answer:1},
+{q:"True or False: The moving assembly line made cars much more expensive to build.",options:["True","False"],answer:1},
+{q:"True or False: The F-150 pickup truck has been a best-seller in America for many years.",options:["True","False"],answer:0},
+{q:"True or False: Ford is currently completely ignoring the development of electric vehicles.",options:["True","False"],answer:1},
+{q:"True or False: The Ford company is proudly American.",options:["True","False"],answer:0}]},
+{brand:"Honda",audioUrl:"./Honda.mp3",questions:[
+{q:"Besides making wonderful cars, what is Honda the absolute biggest maker of in the entire world?",options:["Bicycles","Farm tractors","Motorcycles"],answer:2},
+{q:"What does it mean when the text states that Honda cars are 'incredibly reliable'?",options:["They very rarely break down and last for many years.","They always win every single race they enter.","They are the fastest cars available in Japan."],answer:0},
+{q:"How do Honda's excellent engines help drivers save a lot of money?",options:["They are completely free to repair at any time.","They use very little fuel, making them highly efficient.","They run entirely on water instead of gasoline."],answer:1},
+{q:"Which two specific car models are listed as Honda's most popular and trusted?",options:["The Civic and the Accord.","The Charger and the Challenger.","The Wrangler and the Cherokee."],answer:0},
+{q:"Who are Honda cars 'completely perfect' for according to the text?",options:["Young students, busy families, and daily office workers.","Only the richest business leaders in the world.","People who want to drive off-road through deep mud."],answer:0},
+{q:"In addition to cars and bikes, what advanced technology does Honda also make?",options:["Spaceships and submarines.","Advanced robots and private airplanes.","Televisions and mobile phones."],answer:1},
+{q:"What is buying a Honda always considered to be?",options:["A massive financial risk.","A very wise and safe financial decision.","An aggressive and loud choice."],answer:1},
+{q:"Where is the incredibly successful Honda company located?",options:["China","South Korea","Japan"],answer:2},
+{q:"What core idea does the company strongly believe in?",options:["The true power of dreams.","The absolute need for loud engines.","Making cars only for the extremely wealthy."],answer:0},
+{q:"If a person wants a vehicle that will 'last a very long time,' why is Honda a smart choice?",options:["The car parts are made of solid gold.","You can easily drive them for years without facing big, expensive mechanical problems.","The company forces you to drive extremely slowly."],answer:1},
+{q:"True or False: Honda is originally a manufacturing company from South Korea.",options:["True","False"],answer:1},
+{q:"True or False: The company produces more motorcycles than any other company on Earth.",options:["True","False"],answer:0},
+{q:"True or False: Honda engines are known for wasting large amounts of fuel.",options:["True","False"],answer:1},
+{q:"True or False: The Honda Civic is designed mainly for professional race tracks.",options:["True","False"],answer:1},
+{q:"True or False: Honda also engineers advanced robots and private planes.",options:["True","False"],answer:0}]},
+{brand:"Hyundai",audioUrl:"./Hyundai.mp3",questions:[
+{q:"What does the beautiful Korean word 'Hyundai' actually translate to in English?",options:["Fast speed","Modern","Ocean wave"],answer:1},
+{q:"Why did many people mainly buy Hyundai cars about twenty years ago?",options:["Because they were incredibly fast and loud.","Because they were very cheap to own.","Because they were the most luxurious cars in the world."],answer:1},
+{q:"How has the situation 'completely changed' for Hyundai today?",options:["They only make extremely expensive sports cars now.","They now build very high-quality, safe cars full of modern technology.","They stopped selling cars outside of South Korea."],answer:1},
+{q:"What special promise does Hyundai give with their new cars that makes people truly trust the brand?",options:["A promise that the car will never run out of gas.","A very long warranty promising to fix the car for free if it breaks in the first five to ten years.","A promise to give the owner a free motorcycle."],answer:1},
+{q:"What specific type of environmentally friendly vehicle is Hyundai making very well right now?",options:["Wind-powered trucks.","Some of the very best electric cars in the world.","Cars that run on solar panels on the roof."],answer:1},
+{q:"How does the text describe the interiors of modern Hyundai vehicles?",options:["Quiet, very comfortable, and using premium materials.","Loud, basic, and made completely of hard plastic.","Empty, to save weight for faster racing."],answer:0},
+{q:"Where is Hyundai originally from?",options:["Japan","South Korea","China"],answer:1},
+{q:"What does it mean that Hyundai 'constantly listens to what modern drivers want'?",options:["They place hidden microphones in their cars to spy on drivers.","They actively pay attention to customer needs and quickly build vehicles to fit those daily needs.","They only build cars based on internet surveys."],answer:1},
+{q:"Hyundai's growth globally is described as being incredibly what?",options:["Slow and careful.","Quick and successful.","Difficult and stressful."],answer:1},
+{q:"Which types of vehicles does Hyundai manufacture today?",options:["Only small city cars.","Only giant military trucks.","Everything from small city cars to big family SUVs."],answer:2},
+{q:"True or False: 'Hyundai' translates to 'traditional' in the Korean language.",options:["True","False"],answer:1},
+{q:"True or False: Twenty years ago, the brand was mostly known for being cheap to own.",options:["True","False"],answer:0},
+{q:"True or False: A long warranty means the company refuses to fix broken parts.",options:["True","False"],answer:1},
+{q:"True or False: Hyundai is recognized for rapid global growth and brilliant engineering.",options:["True","False"],answer:0},
+{q:"True or False: The company does not build electric cars.",options:["True","False"],answer:1}]},
+{brand:"Jaguar",audioUrl:"./Jaguar.wav",questions:[
+{q:"What incredible animal does the Jaguar car company take its proud name from?",options:["A large, slow bear.","An incredibly fast, beautiful, and powerful wild cat.","A small, fast bird."],answer:1},
+{q:"How are Jaguar cars carefully designed to look on the road?",options:["Extremely elegant, sporty, and naturally powerful.","Small, quiet, and completely invisible.","Boxy, rough, and ready for farming."],answer:0},
+{q:"In the past, who frequently drove the big, beautiful Jaguar luxury sedans in England?",options:["Teenagers and young students.","Rich business people and important politicians.","Professional race car drivers on dirt tracks."],answer:1},
+{q:"What two materials usually fill the quiet inside of a classic Jaguar?",options:["Cold steel and hard plastic.","The finest soft leather and very warm, beautiful wood details.","Rough cloth and recycled rubber."],answer:1},
+{q:"Why does Jaguar make modern SUVs today?",options:["To compete with massive farming tractors.","To perfectly keep up with what modern families truly want to buy.","Because they forgot how to make small sports cars."],answer:1},
+{q:"What does the Jaguar brand perfectly represent a combination of?",options:["Traditional British style combined with incredibly fast, sporty engine performance.","Cheap prices mixed with simple, basic technology.","Off-road adventure mixed with loud, noisy exhausts."],answer:0},
+{q:"Whenever you see a Jaguar, it always looks ready to jump forward.",options:["Go to sleep.","Jump forward.","Drive off a mountain."],answer:1},
+{q:"What major change is Jaguar planning for the near future?",options:["To stop making cars and only make motorcycles.","To become a completely electric car brand.","To move their factory to the United States."],answer:1},
+{q:"How does driving a Jaguar make the driver feel?",options:["Sophisticated, wealthy, and wonderfully connected to British automotive history.","Stressed, rushed, and worried about breaking down.","Like they are driving a heavy military tank."],answer:0},
+{q:"Where is the highly famous luxury company Jaguar from?",options:["Germany","Italy","The United Kingdom"],answer:2},
+{q:"True or False: Jaguar cars are designed to look naturally powerful, like the wild cat they are named after.",options:["True","False"],answer:0},
+{q:"True or False: Classic Jaguars were known for having cheap, basic interiors.",options:["True","False"],answer:1},
+{q:"True or False: The brand is completely ignoring SUVs and only makes classic sedans today.",options:["True","False"],answer:1},
+{q:"True or False: Jaguar is currently planning to transition to fully electric vehicles.",options:["True","False"],answer:0},
+{q:"True or False: The company has strong historical ties to the United Kingdom.",options:["True","False"],answer:0}]},
+{brand:"Jeep",audioUrl:"./Jeep.wav",questions:[
+{q:"When did the amazing story of Jeep actually start?",options:["During World War I","During World War II","During the 1990s"],answer:1},
+{q:"Why did the American army desperately need the original Jeep?",options:["They needed a highly luxurious car for their generals.","They needed a very strong, small vehicle that could drive absolutely anywhere without getting stuck.","They needed a vehicle that could fly over enemy bases."],answer:1},
+{q:"What is the absolute most famous model of Jeep called?",options:["The Wrangler","The Cherokee","The Pacifica"],answer:0},
+{q:"What unique features can you completely remove from a Jeep Wrangler in the warm summer weather?",options:["The engine and the steering wheel.","The doors and the roof.","The seats and the trunk."],answer:1},
+{q:"How is the physical shape of the Wrangler described in the text?",options:["Completely smooth and aerodynamic.","Very unique, boxy shape with classic round headlights.","Extremely long and pointed like a rocket."],answer:1},
+{q:"Why do people still heavily buy Jeeps today?",options:["Because they are the absolute fastest cars on a race track.","They truly love the exciting idea of ultimate freedom and amazing outdoor adventure.","Because they are the cheapest cars to drive in heavy city traffic."],answer:1},
+{q:"What does a Jeep confidently allow a driver to do?",options:["Safely explore nature and leave boring city roads behind.","Win professional drag races in straight lines.","Travel silently without waking anyone up."],answer:0},
+{q:"What spirit does the Jeep brand perfectly represent?",options:["The quiet, professional European business spirit.","The adventurous American spirit.","The futuristic, technology-obsessed spirit."],answer:1},
+{q:"After the war ended, why did regular, everyday people want to buy Jeeps?",options:["For their own outdoor adventures.","To use as quiet taxis in the city.","Because the government forced them."],answer:0},
+{q:"What types of vehicles does Jeep focus exclusively on making?",options:["Small, electric city cars.","Off-road vehicles and comfortable SUVs.","Fast, low-to-the-ground muscle cars."],answer:1},
+{q:"True or False: Jeeps were originally created for the brave American military.",options:["True","False"],answer:0},
+{q:"True or False: The Wrangler is famous for its very smooth, round, aerodynamic shape.",options:["True","False"],answer:1},
+{q:"True or False: You can take the doors and roof completely off a Jeep Wrangler.",options:["True","False"],answer:0},
+{q:"True or False: Modern Jeeps are only built for off-roading; they do not make comfortable SUVs for families.",options:["True","False"],answer:1},
+{q:"True or False: Jeep represents outdoor adventure and extreme rugged strength.",options:["True","False"],answer:0}]},
+{brand:"Kia",audioUrl:"./Kia.wav",questions:[
+{q:"Kia is the second-largest car company in which country?",options:["Japan","China","South Korea"],answer:2},
+{q:"Which other highly successful car company does Kia actively share parts and technology with?",options:["Hyundai","Honda","Toyota"],answer:0},
+{q:"In the past, what kind of cars did Kia mainly produce?",options:["Very simple, budget-friendly cars for people who wanted to save money.","Extremely fast, expensive supercars.","Massive trucks for the military."],answer:0},
+{q:"How did Kia completely and amazingly change its global image in recent years?",options:["They stopped making cars and only started building motorcycles.","They hired top car designers from Europe to make their cars look very sporty and highly exciting.","They raised their prices so only rich people could buy them."],answer:1},
+{q:"What is the name of one of Kia's famous, highly popular SUVs mentioned in the text?",options:["The Sportage","The Escalade","The Jimny"],answer:0},
+{q:"What is a major advantage of Kia's excellent, fast electric cars?",options:["They are completely invisible at night.","They can charge their batteries very quickly.","They never need to be washed."],answer:1},
+{q:"Why do people strongly choose to buy a Kia today?",options:["They are the absolute loudest cars on the road.","They look fantastic, have advanced safety tech, and are perfectly sold at a fair, reasonable price.","They are the only cars that can be driven underwater."],answer:1},
+{q:"Why did Kia recently change its old logo to a much more modern design?",options:["Because the old logo was painted in illegal colors.","To show the world that they are looking confidently toward the future.","Because another company accidentally stole their logo."],answer:1},
+{q:"What does the brand ultimately prove to modern car buyers?",options:["That you do not need to spend a fortune to comfortably drive a beautiful, highly reliable vehicle.","That South Korean cars are much slower than German cars.","That it is impossible to buy a cheap electric car."],answer:0},
+{q:"How are modern Kia designs described in the text?",options:["Boxy, heavy, and very traditional.","Very sporty, extremely sharp, and highly exciting.","Plain, simple, and totally boring."],answer:1},
+{q:"True or False: Kia is the absolute largest car manufacturer in South Korea.",options:["True","False"],answer:1},
+{q:"True or False: Kia frequently shares computer technology and car parts with Hyundai.",options:["True","False"],answer:0},
+{q:"True or False: Modern Kia vehicles are completely designed by engineers in the United States.",options:["True","False"],answer:1},
+{q:"True or False: Kia changed its company logo to signal a fresh, modern look for the future.",options:["True","False"],answer:0},
+{q:"True or False: The text states that Kia cars are very expensive and difficult to afford.",options:["True","False"],answer:1}]},
+{brand:"Koenigsegg",audioUrl:"./Koenigsegg.wav",questions:[
+{q:"Where is the incredible sports car company Koenigsegg located?",options:["Germany","Sweden","Italy"],answer:1},
+{q:"What was the completely simple dream of the brilliant engineer Christian von Koenigsegg?",options:["He strictly wanted to build the absolute perfect sports car.","He wanted to build the cheapest family car in the world.","He wanted to design comfortable minivans."],answer:0},
+{q:"How does Koenigsegg differ from massive companies like Toyota or Ford?",options:["They are a very small factory and build only a few cars completely by hand every year.","They build millions of cars a year using only robots.","They never test their cars on a real road."],answer:0},
+{q:"What do Koenigsegg cars physically look exactly like?",options:["Classic 1950s pickup trucks.","Futuristic spaceships.","Large, rolling blocks of steel."],answer:1},
+{q:"What are Koenigsegg cars amazingly famous for doing?",options:["Having the longest warranties in the world.","Breaking world speed records.","Driving perfectly in deep snow and ice."],answer:1},
+{q:"What special, extremely light material do they uniquely use to build their fast cars?",options:["Heavy lead.","Carbon fiber.","Recycled glass."],answer:1},
+{q:"Why does a single new Koenigsegg easily cost millions of dollars to buy?",options:["Because the Swedish government heavily taxes them.","Because they are incredibly rare, amazingly fast, and invent completely crazy new technologies.","Because they hide real diamonds inside the seats."],answer:1},
+{q:"What is highly unique and special about the doors on a Koenigsegg?",options:["They slide backward like a family minivan.","They beautifully open by swinging outward and upward in a special way.","They completely detach and stay on the ground when you get in."],answer:1},
+{q:"Driving a Koenigsegg is described as a wild experience that completely pushes the limits of what?",options:["Modern science and extreme engineering.","Off-road mud racing.","Slow, relaxing city traffic."],answer:0},
+{q:"What does this wonderful Swedish brand truly prove to the world?",options:["That building cars requires a massive corporation.","That one single person with a huge dream can totally change the fast automotive world forever.","That electric cars are the only fast cars."],answer:1},
+{q:"True or False: Koenigsegg is a massively large company that produces millions of vehicles a year.",options:["True","False"],answer:1},
+{q:"True or False: The company was started by an engineer from Sweden.",options:["True","False"],answer:0},
+{q:"True or False: The cars are known for breaking world speed records.",options:["True","False"],answer:0},
+{q:"True or False: The doors on a Koenigsegg open exactly like normal, everyday car doors.",options:["True","False"],answer:1},
+{q:"True or False: Koenigsegg creates entirely new engine technologies that no other company has seen before.",options:["True","False"],answer:0}]},
+{brand:"Lada",audioUrl:"./Lada.wav",questions:[
+{q:"Lada is a well-known car company originating from which country?",options:["Germany","China","Russia"],answer:2},
+{q:"What is Lada globally best known for making?",options:["The absolute fastest sports cars in the world.","Extremely simple, cheap, and unbelievably tough cars.","Highly luxurious sedans with soft leather seats."],answer:1},
+{q:"During the time of the Soviet Union, how common was the Lada?",options:["It was strictly banned from the roads.","It was the absolute most common car you would see on the road.","Only the richest politicians were allowed to drive one."],answer:1},
+{q:"What is the name of Lada's single most famous legendary vehicle?",options:["The Lada Niva","The Lada Chiron","The Lada Civic"],answer:0},
+{q:"Why was the Lada Niva specially built and engineered?",options:["To win high-speed races on completely flat tracks.","To confidently handle the terrible, broken roads and incredibly freezing winter weather of Russia.","To safely drive entirely underwater for military missions."],answer:1},
+{q:"What does the Lada Niva completely lack?",options:["Wheels and a steering wheel.","Any modern luxury features, soft seats, or fast speed.","Windows and doors."],answer:1},
+{q:"Why is the Lada highly appreciated if it breaks down?",options:["It is remarkably strong and very easy to fix yourself using only basic hand tools.","A mechanic will fly out in a helicopter to fix it for free.","It instantly fixes itself using advanced computers."],answer:0},
+{q:"Who absolutely loves the Lada Niva even today?",options:["Famous Hollywood celebrities.","Practical people living in very cold, snowy, or mountainous places.","Professional race car drivers."],answer:1},
+{q:"Why do drivers in dangerous weather trust the Niva?",options:["It has advanced radar that melts snow automatically.","It will almost never stop working, no matter how bad the weather outside becomes.","It goes so fast the weather cannot catch it."],answer:1},
+{q:"Lada perfectly represents what two characteristics?",options:["Extreme speed and luxury wealth.","High technology and silent driving.","Rugged endurance and simple mechanical reliability."],answer:2},
+{q:"True or False: Lada cars are famous for being packed with high-tech luxury features.",options:["True","False"],answer:1},
+{q:"True or False: The Lada Niva is a four-wheel-drive off-road vehicle.",options:["True","False"],answer:0},
+{q:"True or False: Ladas are famously very difficult to repair without a specialized computer.",options:["True","False"],answer:1},
+{q:"True or False: The brand was extremely common during the era of the Soviet Union.",options:["True","False"],answer:0},
+{q:"True or False: The Lada Niva was designed specifically to handle terrible roads and freezing weather.",options:["True","False"],answer:0}]},
+{brand:"Lamborghini",audioUrl:"./Lamborghini.wav",questions:[
+{q:"What did the original owner, Ferruccio Lamborghini, actively manufacture before he ever built sports cars?",options:["Commercial airplanes","Farm tractors","Luxury boats"],answer:1},
+{q:"According to the famous story, why did Ferruccio boldly decide to build his own sports car?",options:["He was absolutely not happy with how his new Ferrari drove and wanted to make a better one.","He won a massive amount of money in a bet and wanted to start a factory.","The Italian government ordered him to build cars for the military."],answer:0},
+{q:"What two things do modern Lamborghini cars dramatically look like according to the text?",options:["Old-fashioned horse carriages and simple boxes.","Stealth fighter jets or alien spaceships.","Smooth, round clouds and flying birds."],answer:1},
+{q:"How do the doors of a modern Lamborghini uniquely open?",options:["They slide completely backward along the side of the car.","They open straight up towards the sky instead of opening to the side.","They drop downward into the floor."],answer:1},
+{q:"What angry animal is featured heavily as the company's famous logo?",options:["A silver lion","A golden bull","A black horse"],answer:1},
+{q:"Where do the traditional names for almost all Lamborghini car models come from?",options:["Famous Italian cities and rivers.","Famous, strong fighting bulls.","The names of the engineers who build them."],answer:1},
+{q:"If a car 'easily creates a massive scene,' what does that mean in this context?",options:["The car immediately attracts a huge amount of public attention, causing everyone to stop and stare.","The car frequently crashes and causes dangerous accidents on the highway.","The car makes a large painting on the road using its tires."],answer:0},
+{q:"Who is the absolute perfect driver for a Lamborghini?",options:["Someone who wants a completely silent, invisible ride to work.","Completely confident people who boldly want maximum attention and a remarkably dramatic driving experience.","A parent looking for the safest, most practical family van."],answer:1},
+{q:"How does the text describe the physical shape and colors of the cars?",options:["Extremely sharp angles and incredibly bright paint colors like neon yellow and bright green.","Soft, rounded edges painted only in flat gray and black.","Tall, blocky shapes painted in camouflage."],answer:0},
+{q:"What is the typical price range to purchase one of these Italian super sports cars?",options:["A few thousand dollars.","Hundreds of thousands of dollars.","Exactly one million dollars, no more, no less."],answer:1},
+{q:"True or False: Lamborghini originally started out as a company building farm tractors.",options:["True","False"],answer:0},
+{q:"True or False: The doors of a classic Lamborghini typically open exactly like a standard family car.",options:["True","False"],answer:1},
+{q:"True or False: Driving a Lamborghini is designed to be a very quiet, peaceful, and invisible experience.",options:["True","False"],answer:1},
+{q:"True or False: The company frequently names its car models after famous, strong fighting bulls.",options:["True","False"],answer:0},
+{q:"True or False: The text compares the sharp design of a modern Lamborghini to a stealth fighter jet.",options:["True","False"],answer:0}]},
+{brand:"Land Rover",audioUrl:"./Land%20Rover.wav",questions:[
+{q:"Land Rover is an extremely famous company originating from which country?",options:["The United States","The United Kingdom","Germany"],answer:1},
+{q:"What specific types of vehicles does Land Rover exclusively specialize in making?",options:["High-quality SUVs and very strong off-road vehicles.","Fast, two-door convertible sports cars.","Small electric city scooters."],answer:0},
+{q:"Similar to Jeep, who did Land Rover proudly start making simple, strong cars for?",options:["Hardworking farmers and the military.","Royalty and wealthy politicians.","School teachers and students."],answer:0},
+{q:"What was the wonderfully classic Land Rover Defender famous for being able to easily do?",options:["Win the Formula 1 racing championship.","Drive over steep mountains and safely cross incredibly deep rivers without stopping.","Fly short distances over broken bridges."],answer:1},
+{q:"What is the modern Range Rover highly considered to be?",options:["The cheapest, most basic car available in Europe.","One of the absolute most luxurious and comfortable SUVs in the entire world.","A vehicle strictly meant for construction sites."],answer:1},
+{q:"What does the text mean when it says the Range Rover offers the 'absolute perfect mix'?",options:["It combines incredibly rugged outdoor off-road ability with high-class, relaxing luxury.","It runs on a mix of both gasoline and solar power.","It is a mix of an airplane and a car."],answer:0},
+{q:"What would a driver quietly listen to inside the warm cabin of a modern Range Rover?",options:["The loud roaring of the massive engine.","A premium concert sound system.","The sound of rocks hitting the bottom of the car."],answer:1},
+{q:"The text compares the total comfort of exploring the wild in a modern Land Rover to sitting inside what?",options:["A cold, steel military tank.","A rich, beautiful, and warm living room.","A fast-moving train."],answer:1},
+{q:"Who absolutely loves buying these large, safe vehicles today?",options:["Rich celebrities, busy politicians, and wealthy families everywhere.","Young teenagers buying their very first car.","Professional track racers looking for maximum straight-line speed."],answer:0},
+{q:"What happens if a Range Rover drives through thick, deep mud and snow today?",options:["The car immediately breaks down and needs to be rescued.","The outside gets dirty, but the driver remains perfectly comfortable sitting on the softest, most expensive leather seats.","The mud completely ruins the interior of the car."],answer:1},
+{q:"True or False: Land Rover strictly specializes in making small, lightweight city cars.",options:["True","False"],answer:1},
+{q:"True or False: The original Land Rovers were built as simple, tough machines for farmers and soldiers.",options:["True","False"],answer:0},
+{q:"True or False: A modern Range Rover is physically incapable of driving off-road or through deep mud.",options:["True","False"],answer:1},
+{q:"True or False: The inside of a modern Range Rover is designed to be as luxurious as an expensive living room.",options:["True","False"],answer:0},
+{q:"True or False: The classic Land Rover Defender was widely known for successfully crossing deep rivers.",options:["True","False"],answer:0}]},
+{brand:"Lexus",audioUrl:"./Lexus.wav",questions:[
+{q:"Lexus is the incredibly successful and highly respected luxury division of which massive company?",options:["Honda","Nissan","Toyota"],answer:2},
+{q:"In what year did the parent company deliberately create the Lexus brand?",options:["1886","1989","2010"],answer:1},
+{q:"What was the primary, specific reason the Lexus brand was strongly created?",options:["To build the cheapest, most affordable trucks in the world.","To completely beat the very best luxury cars coming from Germany.","To create vehicles specifically for off-road mud racing."],answer:1},
+{q:"What are the two highly specific things Lexus is extremely famous for worldwide?",options:["Loud exhausts and incredibly bright paint colors.","Absolutely incredible mechanical reliability and completely silent, total comfort.","Being the fastest cars on Earth and being entirely hand-built."],answer:1},
+{q:"What does it mean that a Lexus 'almost literally never breaks down'?",options:["It gives the owner absolute peace of mind with virtually no expensive repair bills or mechanical stress.","The car fixes itself using advanced robotic arms.","You are never allowed to take it to a mechanic."],answer:0},
+{q:"What happens to the cabin when you smoothly drive a Lexus on the highway?",options:["It loudly amplifies the sound of the engine so you can hear the power.","It is incredibly quiet; you can barely hear the engine running or the wind blowing outside.","It actively shakes to keep the driver awake."],answer:1},
+{q:"How is the customer service at Lexus dealerships widely known globally?",options:["To be very fast but extremely rude.","To be the absolute best and most polite in the entire world, treating every customer like royalty.","To only help people who buy the most expensive cars."],answer:1},
+{q:"What legendary, unbreakable quality does a Lexus perfectly combine with premium luxury?",options:["The fast racing speed of a Ferrari.","The tough off-road ability of a Jeep.","The famous, unbreakable mechanical quality of a Toyota."],answer:2},
+{q:"If a driver sincerely wants to completely avoid mechanical stress, why is Lexus the perfect choice?",options:["Because the cars are so cheap they can just buy a new one.","Because they are world-famous for their incredible, long-lasting reliability.","Because they do not use actual engines."],answer:1},
+{q:"How does a Lexus aim to make every single daily journey feel?",options:["Like a highly stressful, intense racing experience.","Like a bumpy, rugged outdoor adventure.","Like a completely peaceful and relaxing experience."],answer:2},
+{q:"True or False: Lexus was originally created by Honda to compete with American muscle cars.",options:["True","False"],answer:1},
+{q:"True or False: Lexus is widely famous worldwide for having incredibly loud, aggressive exhaust systems.",options:["True","False"],answer:1},
+{q:"True or False: Toyota specifically created the Lexus brand to compete against high-end German luxury cars.",options:["True","False"],answer:0},
+{q:"True or False: Lexus dealerships are known for treating their customers like royalty with excellent service.",options:["True","False"],answer:0},
+{q:"True or False: The interior cabin of a Lexus is specially designed to block out wind and engine noise.",options:["True","False"],answer:0}]},
+{brand:"Mazda",audioUrl:"./Mazda.wav",questions:[
+{q:"What does Mazda's famous slogan 'Zoom-Zoom' mean they want their cars to be?",options:["Fun to drive, just like the feeling when you were a child playing with toy cars.","The fastest cars in the world that zoom past everyone else.","Cars with special cameras that zoom in on the road."],answer:0},
+{q:"How does the text describe the visual designs of modern Mazda cars?",options:["Very smooth, elegant, and artistic.","Extremely sharp, boxy, and aggressive.","Giant, heavy, and strictly industrial."],answer:0},
+{q:"Which specific paint color is Mazda highly famous for making look beautiful in the warm sun?",options:["Neon bright green.","Deep metallic red.","Pure matte black."],answer:1},
+{q:"What is the absolute most famous vehicle that Mazda produces?",options:["The MX-5 Miata","The Corvette","The Wrangler"],answer:0},
+{q:"Even though the famous small sports car is not extremely fast, why do people love it so much?",options:["Because it is the cheapest car in the world.","Because it can easily drive underwater.","Because it handles corners perfectly and always makes the driver genuinely smile."],answer:2},
+{q:"What kind of people is the Mazda brand truly meant for?",options:["People who hate driving and just want an autonomous robot car.","Regular people who truly enjoy the actual physical act of driving.","Only professional rally car racers."],answer:1},
+{q:"What is highly special about the engines that Mazda successfully invents?",options:["They use less fuel while still providing plenty of speed.","They run entirely on completely silent electric batteries.","They are the loudest engines ever built in Japan."],answer:0},
+{q:"How does the inside of a modern Mazda physically feel for the passengers?",options:["Very basic, filled with hard, cheap plastics to save money.","Very premium, with clean dashboards and comfortable seats that make long journeys relaxing.","Extremely cramped and entirely uncomfortable."],answer:1},
+{q:"Choosing a Mazda means you deeply care about what specific thing?",options:["How a car physically feels when you turn the steering wheel.","Showing off massive amounts of personal wealth to your neighbors.","Having the biggest, heaviest car on the entire street."],answer:0},
+{q:"What two distinct qualities does Mazda successfully combine into one vehicle?",options:["American muscle power and Italian art.","Japanese reliability with a fun, sporty spirit.","Off-road toughness with electric silence."],answer:1},
+{q:"True or False: The slogan 'Zoom-Zoom' compares driving a Mazda to the fun of playing with toy cars as a child.",options:["True","False"],answer:0},
+{q:"True or False: The MX-5 Miata is globally famous for being the fastest straight-line car in the world.",options:["True","False"],answer:1},
+{q:"True or False: Mazda specially engineers its engines to use excessive amounts of expensive fuel.",options:["True","False"],answer:1},
+{q:"True or False: The company is highly respected for combining unbreakable Japanese reliability with a sporty driving spirit.",options:["True","False"],answer:0},
+{q:"True or False: Mazda's visual designs are typically described as being artistic, smooth, and elegant.",options:["True","False"],answer:0}]},
+{brand:"Mercedes-Benz",audioUrl:"./Mercedes-Benz%20.wav",questions:[
+{q:"What historical achievement is credited to Karl Benz in the year 1886?",options:["He opened the very first modern car dealership.","He built the very first gasoline-powered car.","He invented the rubber car tire."],answer:1},
+{q:"What do the three points of the famous silver star logo represent?",options:["Safety, luxury, and technology.","The company's power on land, on water, and in the air.","The three brothers who started the company."],answer:1},
+{q:"What is Mercedes-Benz's reputation regarding new car technology?",options:["They wait a decade to see if it works before using it.","They completely refuse to use modern computers.","They are usually the first company to use newly invented technology."],answer:2},
+{q:"What wide variety of vehicles does Mercedes-Benz build?",options:["Only heavy military tanks and airplanes.","Everything from comfortable family sedans to large buses, strong trucks, and Formula 1 cars.","Only small electric city scooters."],answer:1},
+{q:"How is a Mercedes-Benz globally perceived by people?",options:["As a true symbol of personal success and high social status.","As a cheap, throwaway car for beginners.","As a dangerous and unstable racing machine."],answer:0},
+{q:"What does the interior of a Mercedes-Benz always physically feel like?",options:["An expensive, comfortable hotel.","A tight, noisy submarine.","A rough, empty wooden box."],answer:0},
+{q:"What specific experience do the smooth rides provide for the passengers?",options:["They make the passengers feel like they are flying.","They block out all street noise for a quiet journey.","They purposefully shake to keep the driver awake."],answer:1},
+{q:"What do people who purchase a Mercedes truly want?",options:["The absolute cheapest transportation available.","The absolute best in German engineering.","A car that can easily drive off-road through thick mud."],answer:1},
+{q:"How long has the brand spent building its reputation for perfection?",options:["About ten years.","Over a century.","Since the year 2010."],answer:1},
+{q:"Which characteristic is NOT mentioned as something drivers appreciate about Mercedes?",options:["Extreme rock-climbing ability.","Comfort and safety.","Timeless style."],answer:0},
+{q:"True or False: Mercedes-Benz is one of the oldest car makers in the entire world.",options:["True","False"],answer:0},
+{q:"True or False: The company logo is a golden circle.",options:["True","False"],answer:1},
+{q:"True or False: Mercedes-Benz refuses to build large trucks or buses.",options:["True","False"],answer:1},
+{q:"True or False: The cabin uses soft leather and bright digital screens.",options:["True","False"],answer:0},
+{q:"True or False: Mercedes-Benz vehicles are known for blocking out noisy street sounds.",options:["True","False"],answer:0}]},
+{brand:"Mitsubishi",audioUrl:"./Mitsubishi.wav",questions:[
+{q:"Besides cars, what other massive items does the Mitsubishi company manufacture?",options:["Televisions and cell phones.","Air conditioners and giant ships.","Bicycles and skateboards."],answer:1},
+{q:"In the 1990s and 2000s, what specific motorsport was Mitsubishi incredibly famous for?",options:["World rally racing.","Formula 1 track racing.","Motorcycle dirt jumping."],answer:0},
+{q:"What was the name of their famous, fast sports car that appeared in video games and movies?",options:["The Lancer Evolution","The Outlander","The Civic Type R"],answer:0},
+{q:"Today, what type of vehicles does Mitsubishi mostly focus on making?",options:["Affordable family SUVs and clever hybrid cars.","Millions of two-seater sports cars.","Giant luxury limousines for politicians."],answer:0},
+{q:"Why are Mitsubishi vehicles considered very safe to drive in bad weather?",options:["They have huge tires that cannot be popped.","They use excellent four-wheel-drive systems.","They are so heavy that wind cannot push them."],answer:1},
+{q:"How is the easily recognizable Mitsubishi logo designed?",options:["Three red diamonds joined at the center.","A silver star with three points.","A golden bull running forward."],answer:0},
+{q:"Why do regular families primarily choose to buy a Mitsubishi?",options:["They want the loudest exhaust on their street.","The cars are practical, strong, and offer great value for money.","They want to show off massive wealth to their neighbors."],answer:1},
+{q:"How are the cars built to handle daily life?",options:["They are built to be tough and dependable.","They are extremely fragile and need constant washing.","They are built specifically to break down quickly."],answer:0},
+{q:"What kind of feeling does a Mitsubishi provide for a driver on a rough dirt road?",options:["A dangerous and scary feeling.","A completely floating, numb feeling.","A safe and solid feeling they can trust for many years."],answer:2},
+{q:"Which Mitsubishi vehicle is specifically mentioned as a clever hybrid car?",options:["The Outlander","The Evolution","The Lancer"],answer:0},
+{q:"True or False: Mitsubishi is a small company that only makes cars.",options:["True","False"],answer:1},
+{q:"True or False: The Lancer Evolution was a highly popular rally racing car.",options:["True","False"],answer:0},
+{q:"True or False: Mitsubishi mostly builds extremely expensive supercars today.",options:["True","False"],answer:1},
+{q:"True or False: The company logo features three red diamonds.",options:["True","False"],answer:0},
+{q:"True or False: Mitsubishi four-wheel-drive systems are excellent for deep snow.",options:["True","False"],answer:0}]},
+{brand:"Nissan",audioUrl:"./Nissan.wav",questions:[
+{q:"How does the text describe the overall nature of Nissan cars?",options:["Practical, reliable, and very easy to live with every day.","Extremely complicated and stressful to drive.","Built exclusively for high-speed track racing."],answer:0},
+{q:"Which popular family SUV does Nissan manufacture?",options:["The Escalade","The Qashqai","The Wrangler"],answer:1},
+{q:"What famous sports car does Nissan build that has an exciting history?",options:["The Corvette","The GT-R","The Mustang"],answer:1},
+{q:"What fierce nickname do fans use for the incredibly fast Nissan sports car?",options:["Godzilla","The Beast","The Rocket"],answer:0},
+{q:"How does the GT-R manage to beat much more expensive supercars?",options:["It uses a massive rocket engine.","It is incredibly lightweight because it has no doors.","It uses advanced computers to maximize speed and control."],answer:2},
+{q:"What important historical milestone did the Nissan Leaf achieve?",options:["It was the first car to drive on the moon.","It was one of the first mass-market electric cars.","It was the first car entirely printed with a 3D printer."],answer:1},
+{q:"What great balance does Nissan effectively offer its buyers?",options:["A balance of everyday family practicality and exciting sports history.","A balance of Italian luxury and American size.","A balance of flying ability and boat technology."],answer:0},
+{q:"What does the brand focus on creating to protect drivers on the road?",options:["Thick steel armor plates.","Intelligent technology that helps drivers stay safe.","Loud sirens that scare other cars away."],answer:1},
+{q:"How is the inside of a Nissan designed to make driving stress-free?",options:["It has hundreds of confusing buttons.","It uses comfortable seats and simple controls.","It drives itself completely without a steering wheel."],answer:1},
+{q:"Why do people all over the world continuously choose to buy Nissans?",options:["They want a smart, durable vehicle that saves fuel and handles daily traffic with ease.","They want to show off that they have millions of dollars.","They want a car that they have to fix every single weekend."],answer:0},
+{q:"True or False: Nissan builds capable pickup trucks for heavy work.",options:["True","False"],answer:0},
+{q:"True or False: The GT-R is famously known as 'Godzilla' by its fans.",options:["True","False"],answer:0},
+{q:"True or False: The Nissan Leaf is a massive, gasoline-powered SUV.",options:["True","False"],answer:1},
+{q:"True or False: Nissan uses advanced computers to make the GT-R incredibly fast.",options:["True","False"],answer:0},
+{q:"True or False: The interiors of Nissans are highly complicated and stressful to use.",options:["True","False"],answer:1}]},
+{brand:"Opel",audioUrl:"./Opel.wav",questions:[
+{q:"How long has Opel been making reliable vehicles?",options:["Only about ten years.","For over a century.","Since the year 2000."],answer:1},
+{q:"Which American company owned Opel for many years in the past?",options:["Ford","Chrysler","General Motors"],answer:2},
+{q:"Today, Opel is part of a large car group located on which continent?",options:["Asia","North America","Europe"],answer:2},
+{q:"What are Opel cars extremely popular and well-known for being?",options:["Highly practical, affordable, and nicely designed for everyday use.","The absolute fastest and most expensive supercars.","Massive, heavy farming vehicles."],answer:0},
+{q:"Why is the small Opel Corsa a great car for city drivers?",options:["It is incredibly loud and scares traffic away.","It is perfect for driving and parking easily in busy cities.","It uses jet fuel to accelerate quickly at red lights."],answer:1},
+{q:"What does Opel focus on providing to regular, everyday people?",options:["Solid German engineering at a price they can easily afford.","Extreme luxury with seats made of pure gold.","Complicated racing cars for professionals."],answer:0},
+{q:"Under what completely different traditional name are Opel cars sold in the United Kingdom?",options:["Holden","Vauxhall","Buick"],answer:1},
+{q:"What modern safety features does the brand use to protect drivers?",options:["Parachutes and heavy steel cages.","Automatic braking and lane assistants.","Bulletproof glass and thick tires."],answer:1},
+{q:"How does the text describe the design inside an Opel cabin?",options:["Clean, simple, and very user-friendly.","Cluttered with dozens of confusing digital screens.","Empty and uncomfortable to save weight."],answer:0},
+{q:"What type of driver is the Opel brand absolutely perfect for?",options:["Billionaires seeking attention.","Drivers wanting a sensible, well-built car that is economical and dependable.","Off-road enthusiasts who drive in deep mud."],answer:1},
+{q:"True or False: Opel was previously owned by General Motors.",options:["True","False"],answer:0},
+{q:"True or False: The Opel Astra is described as a good choice for small families.",options:["True","False"],answer:0},
+{q:"True or False: In the United Kingdom, Opel cars are sold under the name 'Chevrolet'.",options:["True","False"],answer:1},
+{q:"True or False: Opel cars are extremely expensive and hard to afford.",options:["True","False"],answer:1},
+{q:"True or False: Opel uses technology like automatic braking for safety.",options:["True","False"],answer:0}]},
+{brand:"Peugeot",audioUrl:"./Peugeot.wav",questions:[
+{q:"Before Peugeot ever started making cars, what two distinct things did they successfully manufacture?",options:["Airplanes and boats.","Bicycles and steel coffee grinders.","Trains and military tanks."],answer:1},
+{q:"What proud animal is beautifully featured as the silver Peugeot logo?",options:["A running horse.","A standing lion.","A flying eagle."],answer:1},
+{q:"What are traditional French cars, like Peugeot, highly known for?",options:["Being extremely fast and dangerous.","Being very comfortable and driving smoothly over bumpy roads.","Being the loudest cars in Europe."],answer:1},
+{q:"How do the newest, updated Peugeot designs physically look today?",options:["Very round, soft, and cute.","Very sharp, modern, and aggressive.","Exactly like heavy American muscle cars."],answer:1},
+{q:"What specific animal feature do the sharp front lights of a new Peugeot resemble?",options:["Snake eyes.","Eagle wings.","Lion claws."],answer:2},
+{q:"What is unique about the steering wheel used inside a modern Peugeot cabin?",options:["It is massive, exactly like a bus steering wheel.","It is very small, making the car feel sporty and exciting.","It is shaped completely like a square."],answer:1},
+{q:"Why does the digital dashboard sit high up in a Peugeot?",options:["So the driver cannot reach it to change the music.","So the driver can see it easily without looking down.","Because there is no room lower down in the car."],answer:1},
+{q:"What type of European driver is Peugeot currently very popular with?",options:["Drivers who want something stylish and unique.","Farmers who need to carry heavy equipment.","Drivers who only care about having the cheapest possible car."],answer:0},
+{q:"What two concepts does the brand perfectly combine for modern drivers?",options:["American power and Japanese reliability.","Classic French comfort with a futuristic look.","Off-road strength and electric silence."],answer:1},
+{q:"What does the smooth suspension actively protect passengers from?",options:["Loud wind noises.","Shakes from bumpy roads.","Extreme heat from the sun."],answer:1},
+{q:"True or False: Peugeot originally manufactured steel coffee grinders and bicycles.",options:["True","False"],answer:0},
+{q:"True or False: The front headlights of a new Peugeot are designed to look like lion claws.",options:["True","False"],answer:0},
+{q:"True or False: French cars are historically known for being incredibly stiff and uncomfortable.",options:["True","False"],answer:1},
+{q:"True or False: A modern Peugeot uses an extra-large steering wheel.",options:["True","False"],answer:1},
+{q:"True or False: The logo of Peugeot is a silver lion standing on its back legs.",options:["True","False"],answer:0}]},
+{brand:"Pontiac",audioUrl:"./Pontiac.wav",questions:[
+{q:"Pontiac was an American car brand fully owned by which massive company?",options:["Ford Motor Company","Chrysler","General Motors"],answer:2},
+{q:"In what specific year did the Pontiac company unfortunately stop making new cars?",options:["1990","2010","2020"],answer:1},
+{q:"What was Pontiac historically and famously known as within its parent company?",options:["The luxury division.","The economy division.","The performance division."],answer:2},
+{q:"What type of vehicles did Pontiac primarily focus on building?",options:["Slow, comfortable family minivans.","Fun, fast, and exciting muscle cars for younger drivers.","Heavy-duty pickup trucks."],answer:1},
+{q:"The famous Pontiac GTO is widely considered by many people to be what?",options:["The very first true American muscle car in history.","The absolute worst car ever made in America.","The first fully electric car in the world."],answer:0},
+{q:"Which other famous Pontiac model was the star of many popular Hollywood movies in the 1970s and 1980s?",options:["The Firebird Trans Am","The Wrangler","The Corvette"],answer:0},
+{q:"What striking visual design was often beautifully painted on the front hood of a Trans Am?",options:["A massive silver star.","A large, flaming firebird.","Three red diamonds."],answer:1},
+{q:"Even though the brand is completely gone, who still loves collecting and fixing these vehicles?",options:["Classic car fans.","European royalty.","Professional taxi drivers."],answer:0},
+{q:"What specific era of American culture did the Pontiac brand perfectly represent?",options:["An era of deep environmental protection and silent driving.","An era of free spirits, loud horsepower, and cool American style.","An era of severe financial depression and cheap, tiny cars."],answer:1},
+{q:"Why is learning about Pontiac important for students today?",options:["It helps them understand the golden age of American car culture and pure excitement.","It teaches them how to build complex computer engines.","It proves that slow cars are always better than fast cars."],answer:0},
+{q:"True or False: Pontiac is currently building brand new electric muscle cars today.",options:["True","False"],answer:1},
+{q:"True or False: Pontiac was known as the 'performance division' of General Motors.",options:["True","False"],answer:0},
+{q:"True or False: The Pontiac GTO is often called the first true American muscle car.",options:["True","False"],answer:0},
+{q:"True or False: The Trans Am was a famous car used in many Hollywood movies.",options:["True","False"],answer:0},
+{q:"True or False: A giant lion was traditionally painted on the hood of the Trans Am.",options:["True","False"],answer:1}]},
+{brand:"Porsche",audioUrl:"./Porsche.wav",questions:[
+{q:"Who was the highly skilled engineer that originally started the Porsche company?",options:["Karl Benz","Ferdinand Porsche","Enzo Ferrari"],answer:1},
+{q:"What is the absolute most famous and legendary car model manufactured by Porsche?",options:["The 911","The Cayenne","The Taycan"],answer:0},
+{q:"What is highly special and unique about the physical design of the legendary Porsche 911?",options:["It completely lacks a roof and doors.","The engine is located in the back of the car, not in the front.","It drives entirely on three wheels instead of four."],answer:1},
+{q:"How has the physical shape of the 911 changed over the last fifty years?",options:["It completely changes its shape every single year.","It has kept the same basic shape, just slowly becoming better and faster.","It evolved from a tiny car into a massive SUV."],answer:1},
+{q:"Why are Porsches distinctly different from many other delicate supercars?",options:["They are incredibly slow.","They are incredibly reliable and practical enough to drive to work every day.","They are the cheapest cars available in Germany."],answer:1},
+{q:"What is the name of Porsche's very popular and successful luxury SUV?",options:["The Cayenne","The Escalade","The Pacifica"],answer:0},
+{q:"What is the Porsche Taycan globally known for being?",options:["A slow, heavy tractor.","A fully electric sports car.","A massive, gasoline-powered truck."],answer:1},
+{q:"How is the inside of a Porsche cabin meticulously constructed?",options:["With perfect quality, beautiful leather, and precise buttons.","Using cheap, light plastic to make the car faster.","It is left completely empty for racing purposes."],answer:0},
+{q:"Why does driving a Porsche give the driver a feeling of 'total control'?",options:["Because the car simply drives itself.","Because the brakes and the steering are absolutely excellent and responsive.","Because it never goes faster than fifty kilometers per hour."],answer:1},
+{q:"What does the text mean by a 'classic sports car look that never goes out of style'?",options:["The design is timeless and will always look attractive and cool.","The car looks very old and needs to be replaced.","The paint color fades quickly in the bright sun."],answer:0},
+{q:"True or False: The engine in a Porsche 911 is traditionally located in the front of the car.",options:["True","False"],answer:1},
+{q:"True or False: Porsches are considered highly reliable and can be used for everyday commuting.",options:["True","False"],answer:0},
+{q:"True or False: The Porsche Taycan is a fully electric sports car.",options:["True","False"],answer:0},
+{q:"True or False: Porsche completely changes the body shape of the 911 every single year.",options:["True","False"],answer:1},
+{q:"True or False: The brand is aimed at people who love engineering perfection and high speeds.",options:["True","False"],answer:0}]},
+{brand:"Renault",audioUrl:"./Renault.wav",questions:[
+{q:"Renault is a major car company that is highly popular all over Europe. Where is it from?",options:["Germany","Italy","France"],answer:2},
+{q:"What is Renault globally famous for producing for everyday families?",options:["Extremely expensive and highly exclusive supercars.","Practical, affordable, and safe cars.","Massive, fuel-hungry pickup trucks."],answer:1},
+{q:"Why is the small Renault Clio considered one of the best-selling cars in European history?",options:["It is completely bulletproof and floats on water.","It is cheap to buy and very easy to drive.","It is the absolute fastest car legally allowed on the road."],answer:1},
+{q:"What clever design concept was Renault one of the first companies to create in Europe?",options:["The electric battery.","Family minivans.","Cars with only three wheels."],answer:1},
+{q:"In what highly competitive professional motorsport does Renault have a very strong history?",options:["Off-road motorcycle racing.","Formula 1 racing.","Drag racing."],answer:1},
+{q:"How does Renault use the smart lessons they learn from professional racing tracks?",options:["They use them to make their everyday street cars better, safer, and much more fuel-efficient.","They completely keep them secret to win more races.","They sell the information to airplane companies."],answer:0},
+{q:"What distinct geometric shape is the simple Renault logo?",options:["A perfect circle.","A silver diamond.","A golden triangle."],answer:1},
+{q:"Why do millions of normal people strongly choose to buy a Renault?",options:["They want a dependable car that fits into a normal budget while offering good comfort.","They want the loudest and most aggressive vehicle possible.","They want a car that they can personally build at home."],answer:0},
+{q:"How is the brand's overall personality described in the text?",options:["It is an extremely hostile and aggressive brand.","It is an exclusive brand only for billionaires.","It is a friendly brand that focuses on making daily life easier."],answer:2},
+{q:"Who are the primary customers relying on Renault for trusted transportation?",options:["Commuters, parents, and young drivers.","Professional athletes and actors.","Only military generals and politicians."],answer:0},
+{q:"True or False: The Renault Clio is historically one of the worst-selling cars in Europe.",options:["True","False"],answer:1},
+{q:"True or False: Renault was one of the very first companies in Europe to build family minivans.",options:["True","False"],answer:0},
+{q:"True or False: Renault uses its Formula 1 racing knowledge to make everyday cars safer and more efficient.",options:["True","False"],answer:0},
+{q:"True or False: The company logo is a large silver diamond shape.",options:["True","False"],answer:0},
+{q:"True or False: Renault cars are primarily designed to be extremely expensive and exclusive.",options:["True","False"],answer:1}]},
+{brand:"Rolls-Royce",audioUrl:"./Rolls-Royce%20.wav",questions:[
+{q:"Rolls-Royce is considered the ultimate luxury car brand in the world. Which company owns it today?",options:["Ford Motor Company","The German company BMW","Toyota"],answer:1},
+{q:"Everything regarding a Rolls-Royce is intensely focused on what three things?",options:["Extreme speed, loud noise, and bright colors.","Absolute perfection, total silence, and extreme wealth.","Off-road adventure, mud, and cheap prices."],answer:1},
+{q:"How are the physical size and weight of the cars described?",options:["They are incredibly tiny and very light.","They are exactly the same size as a normal family car.","They are huge, heavy, and majestic."],answer:2},
+{q:"What specific, extremely soft material rests under your feet inside the car?",options:["Thick, soft real wool carpets.","Cold, hard steel plates.","Rough, cheap plastic mats."],answer:0},
+{q:"What unique and beautiful feature is built directly into the roof of a Rolls-Royce?",options:["A massive glass window that opens completely.","Hundreds of tiny lights that look like stars in the night sky.","A television screen that shows movies."],answer:1},
+{q:"What highly practical item is famously and cleverly hidden inside the car doors?",options:["A spare tire.","Special hidden umbrellas.","A small set of mechanic's tools."],answer:1},
+{q:"How loud is a running Rolls-Royce engine from inside the cabin?",options:["It is so smooth and quiet that you cannot hear it running at all.","It is remarkably loud and shakes the entire vehicle.","It makes a high-pitched whistling sound."],answer:0},
+{q:"Because they are incredibly expensive, what do many owners choose to do instead of driving?",options:["They leave the car in a museum.","They hire a professional driver while they relax or work in the back seat.","They let their young children drive it."],answer:1},
+{q:"What is the famous silver statue on the front of every Rolls-Royce called?",options:["The Spirit of Ecstasy","The Flying Angel","The Silver Bird"],answer:0},
+{q:"What does owning a Rolls-Royce represent on a massive global scale?",options:["It is the ultimate global symbol of luxury, success, and high-class British tradition.","It proves that the owner cares deeply about saving money.","It shows a deep passion for high-speed professional racing."],answer:0},
+{q:"True or False: Rolls-Royce is a historic British company that is now owned by BMW.",options:["True","False"],answer:0},
+{q:"True or False: The roof of a Rolls-Royce is designed to look like a bright, sunny blue sky.",options:["True","False"],answer:1},
+{q:"True or False: The engine of a Rolls-Royce is designed to be extremely loud and aggressive.",options:["True","False"],answer:1},
+{q:"True or False: Special umbrellas are cleverly hidden inside the doors of the cars.",options:["True","False"],answer:0},
+{q:"True or False: Many Rolls-Royce owners prefer to sit in the back while a professional drives.",options:["True","False"],answer:0}]},
+{brand:"Saab",audioUrl:"./Saab.wav",questions:[
+{q:"Saab was a very unique and highly special car company originating from which country?",options:["Sweden","Germany","Japan"],answer:0},
+{q:"What highly complex machines did Saab build before they ever started making cars?",options:["Nuclear submarines.","Military airplanes.","Farming tractors."],answer:1},
+{q:"How did Saab's historical background directly affect the interior design of their cars?",options:["The interiors were designed to look like airplane cockpits.","They had no steering wheels, only joysticks.","The seats were made of uncomfortable military canvas."],answer:0},
+{q:"What completely unique and odd location did Saab put the ignition keyhole in?",options:["Hidden secretly inside the glovebox.","On the roof of the car.","Down between the front seats instead of on the dashboard."],answer:2},
+{q:"What two major engineering features was Saab globally famous for?",options:["Incredible passenger safety and powerful turbo engines.","Being the absolute fastest and cheapest cars.","Running entirely on electricity and solar power."],answer:0},
+{q:"Why were Saab cars built to be exceptionally strong?",options:["To carry massive loads of heavy rocks.","To survive freezing cold winters and protect families in terrible accidents.","To drive straight through brick walls in action movies."],answer:1},
+{q:"In what unfortunate year did the company have financial trouble and officially stop making cars?",options:["1990","2012","2020"],answer:1},
+{q:"Who are the loyal fans that still deeply love and drive Saab cars today?",options:["People who only care about extreme wealth and status.","Independent thinkers who do not want to follow the normal crowd.","Teenagers who want the loudest exhaust possible."],answer:1},
+{q:"What did the Saab brand successfully prove to the automotive world?",options:["That a car could be highly practical, completely safe for children, and fun to drive all at the same time.","That cars are simply too dangerous to drive in the winter.","That airplanes are cheaper to build than cars."],answer:0},
+{q:"How did Saab cars generally look on the road compared to others?",options:["Exactly identical to every other German car.","They looked a little different, unique, and uniquely Swedish.","They were completely invisible and ordinary."],answer:1},
+{q:"True or False: Saab originally built military airplanes before manufacturing cars.",options:["True","False"],answer:0},
+{q:"True or False: The ignition key in a Saab was normally placed high up on the dashboard.",options:["True","False"],answer:1},
+{q:"True or False: Saab was highly famous for prioritizing passenger safety and using turbo engines.",options:["True","False"],answer:0},
+{q:"True or False: The Saab company is still actively producing thousands of new cars today.",options:["True","False"],answer:1},
+{q:"True or False: Saab cars were known to be very weak and dangerous in cold winter weather.",options:["True","False"],answer:1}]},
+{brand:"Seat",audioUrl:"./Seat.wav",questions:[
+{q:"Seat is a highly popular car company originating from which beautiful European country?",options:["Italy","Spain","France"],answer:1},
+{q:"Which massive German automotive corporation fully owns the Seat brand today?",options:["BMW Group","Volkswagen Group","Mercedes-Benz"],answer:1},
+{q:"If Seat uses German engines, how do they completely change the outside of the cars?",options:["They design them to look more passionate, sporty, and distinctly Spanish.","They paint them entirely in dull, boring colors.","They make them look exactly like heavy military trucks."],answer:0},
+{q:"What specific demographic of people is the Seat brand primarily aimed at?",options:["Elderly drivers who want a very slow, relaxing ride.","Younger drivers who want a stylish, fun, and affordable car.","Billionaires looking for ultimate luxury."],answer:1},
+{q:"Which very popular small car model is considered great for first-time drivers?",options:["The Seat Ibiza","The Seat Leon","The Volkswagen Golf"],answer:0},
+{q:"Why are Seat cars considered extremely reliable and easy to fix at any mechanic shop?",options:["Because they do not have engines.","Because they cleverly use proven Volkswagen parts under the metal.","Because they magically fix themselves overnight."],answer:1},
+{q:"What two concepts does the name Seat perfectly represent a mix of?",options:["American muscle and Japanese efficiency.","German engineering quality and vibrant Spanish design energy.","French comfort and British luxury."],answer:1},
+{q:"How is the computer technology inside a modern Seat cabin described?",options:["It is completely outdated and uses old cassette tapes.","It is modern and connects to smartphones very easily.","It is extremely confusing and difficult to use."],answer:1},
+{q:"The Seat Leon is described as a great sporty hatchback for whom?",options:["Large corporate politicians.","Young families who need space but want a sporty look.","Farmers carrying heavy animals."],answer:1},
+{q:"Why is buying a Seat considered an offering of 'great value'?",options:["Because the cars are completely free.","Because you get a lively, reliable, and sporty driving experience without spending a huge amount of money.","Because the car actually pays you to drive it."],answer:1},
+{q:"True or False: Seat is an independent company that is not owned by anyone else.",options:["True","False"],answer:1},
+{q:"True or False: The company heavily uses parts and engines from the Volkswagen Group.",options:["True","False"],answer:0},
+{q:"True or False: Seat cars are specifically designed to look boring and blend into traffic.",options:["True","False"],answer:1},
+{q:"True or False: The brand is highly targeted toward younger drivers and young families.",options:["True","False"],answer:0},
+{q:"True or False: Seat cars are notoriously very difficult and expensive for mechanics to repair.",options:["True","False"],answer:1}]},
+{brand:"Skoda",audioUrl:"./Skoda.wav",questions:[
+{q:"Skoda is a highly successful and reliable car company from which country?",options:["Russia","The Czech Republic","Germany"],answer:1},
+{q:"Just like the brand Seat, Skoda is also fully owned by which massive company?",options:["General Motors","The German Volkswagen Group","Toyota"],answer:1},
+{q:"While Seat focuses on sporty design, what three things does Skoda heavily focus on?",options:["Space, family practicality, and excellent value for money.","Extreme speed, loud noise, and racing tires.","Luxury leather, high prices, and exclusivity."],answer:0},
+{q:"What major advantage does a Skoda usually give you compared to other cars in the exact same price range?",options:["A much faster, louder engine.","Much more physical space for your luggage and passengers.","A car that is completely plated in expensive silver."],answer:1},
+{q:"What does Skoda call their special, clever little hidden features?",options:["'Simply Clever' ideas.","'Super Fast' mechanics.","'Highly Expensive' options."],answer:0},
+{q:"What is an excellent example of a 'Simply Clever' feature hidden inside the driver's door?",options:["A hot coffee maker.","A small, hidden umbrella.","A spare steering wheel."],answer:1},
+{q:"Where does Skoda cleverly hide a handy ice scraper for freezing winter mornings?",options:["Under the front seat.","Inside the fuel filler door.","Attached to the rear window."],answer:1},
+{q:"Twenty years ago, people made jokes about Skoda being bad. How are they viewed today?",options:["They are still considered the worst cars on the road.","They are deeply respected as some of the smartest, most reliable, and sensible family cars you can buy.","They are only bought by people who want to race on dirt tracks."],answer:1},
+{q:"Which two specific Skoda models are incredibly popular among taxi drivers and families?",options:["The Octavia and the Superb.","The Ibiza and the Leon.","The Civic and the Accord."],answer:0},
+{q:"What does the extreme durability of a Skoda ultimately prove to car buyers?",options:["That good, lasting quality can actually be affordable for everyone.","That you must spend a million dollars to get a car that lasts.","That German cars are worse than Czech cars."],answer:0},
+{q:"True or False: Skoda is originally a car company from the Czech Republic.",options:["True","False"],answer:0},
+{q:"True or False: Skoda cars are known for having very tiny, cramped interiors.",options:["True","False"],answer:1},
+{q:"True or False: The company hides clever items in the car, like an umbrella in the door.",options:["True","False"],answer:0},
+{q:"True or False: Twenty years ago, people widely considered Skoda to be a highly luxurious supercar brand.",options:["True","False"],answer:1},
+{q:"True or False: Skoda cars are known to comfortably last for hundreds of thousands of kilometers without major problems.",options:["True","False"],answer:0}]},
+{brand:"Subaru",audioUrl:"./Subaru.wav",questions:[
+{q:"Subaru is a famous car company from Japan. What highly special system comes on almost every single car they make?",options:["Symmetrical All-Wheel Drive.","Advanced Flying Mode.","Self-Driving Robot Steering."],answer:0},
+{q:"What exactly does the 'Symmetrical All-Wheel Drive' system do?",options:["It turns off the engine to save fuel when you stop.","It automatically sends engine power to all four wheels all the time.","It makes the car balance perfectly on two wheels."],answer:1},
+{q:"Because of this specific technology, what are Subaru cars amazing at doing safely?",options:["Driving at 300 kilometers per hour on a race track.","Driving in dangerous weather like snow, ice, heavy rain, or deep mud.","Driving completely underwater without leaking."],answer:1},
+{q:"In what specific types of geographic places are Subarus extremely popular?",options:["Places with entirely flat, perfect roads and hot sun.","Places with big mountains, cold winters, and rough roads.","Only in crowded, indoor parking garages."],answer:1},
+{q:"What special type of engine does Subaru use that sits completely flat?",options:["A 'boxer' engine.","A 'V8' muscle engine.","A 'jet' engine."],answer:0},
+{q:"What highly unique sound does the flat boxer engine make?",options:["A high-pitched, screaming whistle.","A completely silent hum.","A very unique, deep rumble sound."],answer:2},
+{q:"What types of weekend activities do typical Subaru owners usually love?",options:["Shopping for expensive jewelry.","Outdoor activities like camping, hiking, and skiing.","Staying indoors and playing video games."],answer:1},
+{q:"Why do owners typically keep their Subaru cars for a very long time?",options:["Because the cars are incredibly durable and hard to break.","Because it is illegal to sell a Subaru once you buy it.","Because nobody else wants to buy a used one."],answer:0},
+{q:"What distinct image is featured on the beautiful Subaru company logo?",options:["A cluster of six bright stars.","A golden bull ready to attack.","Three red diamonds."],answer:0},
+{q:"What does the Subaru brand perfectly represent for families?",options:["Pure adventure, safety, and unbreakable Japanese reliability.","Extreme, stressful speed and dangerous racing.","Cheap, unreliable transportation that breaks easily."],answer:0},
+{q:"True or False: Almost all Subaru cars send power to all four wheels constantly.",options:["True","False"],answer:0},
+{q:"True or False: Subarus are highly dangerous to drive in snow or heavy rain.",options:["True","False"],answer:1},
+{q:"True or False: The company uses a special flat engine known as a 'boxer' engine.",options:["True","False"],answer:0},
+{q:"True or False: Subaru owners generally love outdoor sports and nature activities.",options:["True","False"],answer:0},
+{q:"True or False: The Subaru logo features a single, giant silver circle.",options:["True","False"],answer:1}]},
+{brand:"Suzuki",audioUrl:"./Suzuki.wav",questions:[
+{q:"Besides making small cars and excellent motorcycles, what else does the successful Suzuki company manufacture?",options:["Large commercial airplanes.","Powerful boat engines.","Luxury living room furniture."],answer:1},
+{q:"When it comes strictly to cars, what is Suzuki a global world expert at making?",options:["Massive, heavy, gas-guzzling trucks.","Small, light, and very efficient vehicles.","The fastest, most expensive supercars on Earth."],answer:1},
+{q:"Why are Suzuki cars absolutely perfect for crowded, busy cities?",options:["They can easily fly over traffic jams.","They are loud and scare other cars out of the way.","They fit perfectly into narrow streets and tiny parking spaces."],answer:2},
+{q:"What is the name of their incredibly famous and highly capable tiny SUV?",options:["The Suzuki Jimny","The Suzuki Qashqai","The Suzuki Wrangler"],answer:0},
+{q:"Even though the Jimny is very tiny, what amazing feat can it easily accomplish?",options:["It can drive off-road over giant rocks and thick mud just as well as big, expensive trucks.","It can win a Formula 1 race on a straight track.","It can carry twenty passengers comfortably."],answer:0},
+{q:"Why are Suzuki cars incredibly popular in places like India and Asia?",options:["They are considered absolute luxury symbols of extreme wealth.","They are cheap to buy, cheap to repair, and use very little fuel.","They are the only cars legally allowed on the road."],answer:1},
+{q:"What is the simple and recognizable design of the brand's logo?",options:["A big red letter S.","Four joined silver rings.","A golden bowtie."],answer:0},
+{q:"What does the tiny but tough Jimny ultimately prove to adventurous drivers?",options:["That off-roading is impossible without a massive truck.","That you do not need a giant car to have a big adventure.","That small cars will always get stuck in the mud."],answer:1},
+{q:"Why do sensible drivers specifically choose a Suzuki for their daily life?",options:["They want a simple, honest, hardworking vehicle that saves money at the gas station.","They want a car that will constantly break down so they can practice fixing it.","They want the heaviest car possible for safety."],answer:0},
+{q:"What is the main advantage of a car being 'light and efficient'?",options:["It burns massive amounts of fuel very quickly.","It is very easy to maneuver and costs very little money to run every day.","It easily blows away in a strong windstorm."],answer:1},
+{q:"True or False: Suzuki is a company originating from Japan.",options:["True","False"],answer:0},
+{q:"True or False: Suzuki specializes in building massive, heavy family minivans.",options:["True","False"],answer:1},
+{q:"True or False: The Suzuki Jimny is highly respected for its tough, off-road abilities.",options:["True","False"],answer:0},
+{q:"True or False: Suzuki cars are known to be extremely expensive to repair when they break.",options:["True","False"],answer:1},
+{q:"True or False: The logo of the company is a large, bright red letter S.",options:["True","False"],answer:0}]},
+{brand:"Tesla",audioUrl:"./Tesla.wav",questions:[
+{q:"How did the American company Tesla completely change the global car industry forever?",options:["They proved that cars could run on saltwater.","They proved that fully electric cars did not have to be slow, ugly, or boring.","They were the first company to make cars out of plastic."],answer:1},
+{q:"Who is the famous entrepreneur that helped start the company along with a team of engineers?",options:["Henry Ford","Ettore Bugatti","Elon Musk"],answer:2},
+{q:"What specific type of fuel do all Tesla vehicles completely refuse to use?",options:["Electricity","Gasoline","Solar power"],answer:1},
+{q:"How does the text accurately describe the physical driving experience of a Tesla?",options:["Incredibly fast, very quiet, and completely full of futuristic computer technology.","Loud, shaky, and incredibly difficult to steer.","Slow, relaxing, and totally disconnected from technology."],answer:0},
+{q:"How is the inside of a Tesla cabin uniquely described?",options:["Very minimalist; there are almost no physical buttons.","Highly cluttered with hundreds of confusing switches and dials.","Designed to look exactly like an old-fashioned living room."],answer:0},
+{q:"How does the driver control almost everything inside a modern Tesla?",options:["Using a small joystick on the floor.","Using one giant touchscreen located in the center of the dashboard.","Using voice commands only, with no screens at all."],answer:1},
+{q:"What did Tesla brilliantly build around the world to make long-distance travel easy?",options:["A huge network of fast 'Superchargers' to charge the batteries quickly.","Special underground tunnels just for their cars.","Gas stations that also sell batteries."],answer:0},
+{q:"How do Tesla cars receive new features and updates overnight?",options:["A mechanic must visit your house while you sleep.","They update their software entirely over the internet, just like a smartphone.","You have to buy a new computer chip and install it yourself."],answer:1},
+{q:"What does the Tesla brand ultimately represent for the automotive world?",options:["A return to classic, simple, slow-moving historical cars.","The future of transportation, combining clean energy with high performance and tech.","A failed experiment in battery technology."],answer:1},
+{q:"What is Tesla's current position in the global electric vehicle market?",options:["They are the least known electric car brand.","They are the most famous and dominant electric car brand in the world.","They have completely stopped making electric cars."],answer:1},
+{q:"True or False: Tesla cars use a mixture of gasoline and electricity to drive.",options:["True","False"],answer:1},
+{q:"True or False: The inside of a Tesla is famously filled with hundreds of physical buttons.",options:["True","False"],answer:1},
+{q:"True or False: Tesla built a global network of 'Superchargers' for long trips.",options:["True","False"],answer:0},
+{q:"True or False: Tesla cars can update their software over the internet.",options:["True","False"],answer:0},
+{q:"True or False: The text states that Tesla proved electric cars are usually slow and boring.",options:["True","False"],answer:1}]},
+{brand:"Toyota",audioUrl:"./Toyota.wav",questions:[
+{q:"Toyota is a massive car company from Japan. What is their usual ranking in global sales?",options:["They are the smallest seller of cars.","They are usually the biggest seller of vehicles in the entire world.","They only sell cars inside of Japan."],answer:1},
+{q:"What is the absolute core secret to Toyota’s massive global success?",options:["They make the most expensive luxury cars.","They have extreme mechanical reliability and rarely break down.","They are the fastest cars allowed on the highway."],answer:1},
+{q:"What amazing historical record does the famous Toyota Corolla hold?",options:["It is the best-selling car name in human history.","It is the single fastest car ever tested.","It was the very first car ever built."],answer:0},
+{q:"What revolutionary vehicle did Toyota famously invent to save drivers fuel?",options:["The fully electric Taycan.","The Prius, which was the first popular hybrid car using both gas and electricity.","The heavy-duty Silverado truck."],answer:1},
+{q:"Which legendary Toyota SUV is globally famous for being able to cross harsh deserts?",options:["The Land Cruiser","The Qashqai","The Wrangler"],answer:0},
+{q:"Why do people all over the entire world literally 'trust Toyota with their lives'?",options:["Because the cars are completely bulletproof.","Because they build sensible, high-quality cars that simply last forever.","Because they are the only cars with airbags."],answer:1},
+{q:"What visual design makes up the famous Toyota company logo?",options:["A silver star with three points.","Three overlapping circles representing the connection between company and customer.","A golden bull ready to charge."],answer:1},
+{q:"What does a Toyota owner absolutely know will happen every single morning?",options:["The car will confidently start without any problems, even after years of use.","The car will need to be repaired before driving.","The car will be completely out of fuel."],answer:0},
+{q:"What is buying a Toyota always considered to be?",options:["A highly dangerous and risky gamble.","A smart, safe, and entirely logical choice for any family or worker.","An emotional decision to show off wealth."],answer:1},
+{q:"What wide range of vehicles does Toyota manufacture?",options:["Only small, cheap city cars.","Only massive, heavy-duty off-road trucks.","Everything from small city hatchbacks to huge, legendary SUVs."],answer:2},
+{q:"True or False: Toyota is typically the biggest seller of cars in the world.",options:["True","False"],answer:0},
+{q:"True or False: The Toyota Corolla holds the record as the best-selling car name in history.",options:["True","False"],answer:0},
+{q:"True or False: The Prius was an incredibly unpopular and failed hybrid car.",options:["True","False"],answer:1},
+{q:"True or False: Toyota vehicles are widely considered to be fragile and easily broken.",options:["True","False"],answer:1},
+{q:"True or False: The Toyota logo features three overlapping circles.",options:["True","False"],answer:0}]},
+{brand:"Volkswagen",audioUrl:"./Volkswagen.wav",questions:[
+{q:"In the German language, what does the name 'Volkswagen' literally translate to?",options:["The Fast Car","The People's Car","The Strong Car"],answer:1},
+{q:"Which historic, small, round vehicle made the company extremely popular all over the world?",options:["The Volkswagen Golf","The Volkswagen Beetle","The Volkswagen Transporter"],answer:1},
+{q:"Why did the classic Beetle become so incredibly successful globally?",options:["Because it was the fastest supercar of its era.","Because it was cheap, highly simple, and completely reliable.","Because it was the first car to have a television inside."],answer:1},
+{q:"Today, which model is considered the absolute global standard for a great family hatchback?",options:["The Volkswagen Golf","The Volkswagen Polo","The Volkswagen Niva"],answer:0},
+{q:"How is the modern Volkswagen Golf described in the text?",options:["Tiny, cramped, and very loud on the highway.","Practical, comfortable, very well-made, and looking highly classy.","Massive, heavy, and impossible to park in a city."],answer:1},
+{q:"The Volkswagen Group is so massively large that it actually owns which other famous brands?",options:["Ford and Chevrolet.","Audi, Porsche, and Lamborghini.","Toyota and Honda."],answer:1},
+{q:"How do Volkswagen cars physically feel when driving fast on the highway?",options:["Very solid, highly safe, and wonderfully quiet.","Light, shaky, and completely terrifying.","They vibrate violently to keep the driver awake."],answer:0},
+{q:"What does Volkswagen actively bring to everyday, normal drivers?",options:["High-quality German engineering at a reasonable, affordable price.","Extreme luxury that only billionaires can afford.","Cheap, unreliable parts that break easily."],answer:0},
+{q:"How recognized is the simple VW logo around the globe?",options:["It is only known inside of Germany.","It is recognized in virtually every single country in the world.","It is completely unknown because it was just redesigned."],answer:1},
+{q:"Choosing a Volkswagen means you deeply want a car that will do what over a long time?",options:["Break down constantly to teach you mechanics.","Protect your children, handle beautifully, and hold its financial value.","Rust and become completely worthless in a year."],answer:1},
+{q:"True or False: 'Volkswagen' literally means 'The Fast Car' in German.",options:["True","False"],answer:1},
+{q:"True or False: The classic Beetle became popular because it was extremely expensive and rare.",options:["True","False"],answer:1},
+{q:"True or False: The Volkswagen Group owns luxury brands like Porsche and Lamborghini.",options:["True","False"],answer:0},
+{q:"True or False: The Volkswagen Golf is widely considered a great, practical family hatchback.",options:["True","False"],answer:0},
+{q:"True or False: Volkswagen cars are known for feeling highly unstable and loud on the highway.",options:["True","False"],answer:1}]},
+{brand:"Volvo",audioUrl:"./Volvo.wav",questions:[
+{q:"When people hear the word 'Volvo,' what one specific word do they immediately think of?",options:["Speed","Safety","Cheap"],answer:1},
+{q:"What incredibly important safety device did a brave Volvo engineer invent in the year 1959?",options:["The steering wheel airbag.","The modern three-point seatbelt.","The anti-lock braking system."],answer:1},
+{q:"What incredibly generous thing did the Volvo company do with this life-saving invention?",options:["They gave the invention to the world for free to save millions of lives.","They kept it completely secret to make more money.","They charged other companies millions of dollars to use it."],answer:0},
+{q:"Because they come from the cold country of Sweden, what are Volvos naturally excellent at doing?",options:["Winning races in the hot desert.","Driving in deep snow and freezing weather without any trouble.","Running entirely on solar power."],answer:1},
+{q:"How is the physical design of a modern Volvo beautifully described?",options:["Very clean, simple, and elegant, exactly like Scandinavian furniture.","Aggressive, sharp, and highly chaotic.","Completely round and shaped like a bubble."],answer:0},
+{q:"What luxurious materials do they actively use inside the quiet cabin?",options:["Hard plastics and cheap cloth.","Soft leather, real wood, and large digital screens.","Only bare metal and racing carbon fiber."],answer:1},
+{q:"What specific type of vehicles is Volvo focusing very heavily on making for the future?",options:["Safe, premium electric SUVs.","Massive, diesel-powered farming tractors.","Tiny, noisy gasoline sports cars."],answer:0},
+{q:"What is the absolute number one priority for a person who chooses to buy a Volvo?",options:["They want to be the fastest car on the highway.","They want a luxury vehicle that protects their family above absolutely everything else.","They want a car that requires absolutely no maintenance."],answer:1},
+{q:"What specific regional style does the Volvo design perfectly represent?",options:["Loud American muscle.","Quiet Scandinavian style.","Traditional Italian passion."],answer:1},
+{q:"What combination makes Volvo highly unique in the luxury car market?",options:["Combining cheap materials with massive engines.","Combining quiet Scandinavian style with the absolute best safety technology in the world.","Combining off-road ability with a convertible roof."],answer:1},
+{q:"True or False: Volvo is a premium car company originally from Sweden.",options:["True","False"],answer:0},
+{q:"True or False: A Volvo engineer invented the three-point seatbelt and charged a fortune for it.",options:["True","False"],answer:1},
+{q:"True or False: Volvo vehicles are generally excellent at driving in freezing weather and deep snow.",options:["True","False"],answer:0},
+{q:"True or False: The design of a Volvo is compared to clean and simple Scandinavian furniture.",options:["True","False"],answer:0},
+{q:"True or False: Volvo is currently focusing heavily on building fast, gasoline sports cars for the future.",options:["True","False"],answer:1}]}
+];
+
+let currentAudio = new Audio();
+let isPlaying = false;
+let totalQuestions = 0;
+let questionsAnswered = 0;
+let correctAnswers = 0;
+
+const carList = document.getElementById('car-list');
+quizData.forEach((car, index) => {
+    const btn = document.createElement('button');
+    btn.className = 'car-btn';
+    btn.innerText = `🎧 ${car.brand}`;
+    btn.onclick = () => loadQuiz(index);
+    carList.appendChild(btn);
+});
+
+function loadQuiz(index) {
+    const currentCar = quizData[index];
+    document.getElementById('home-screen').classList.remove('active');
+    document.getElementById('quiz-screen').classList.add('active');
+    document.getElementById('quiz-title').innerText = currentCar.brand;
+    document.getElementById('results-section').style.display = 'none';
+    
+    totalQuestions = currentCar.questions.length;
+    questionsAnswered = 0;
+    correctAnswers = 0;
+
+    currentAudio.src = currentCar.audioUrl;
+    
+    const container = document.getElementById('questions-container');
+    container.innerHTML = ''; 
+
+    currentCar.questions.forEach((q, qIndex) => {
+        const block = document.createElement('div');
+        block.className = 'question-block';
+        
+        const title = document.createElement('div');
+        title.className = 'question-text';
+        title.innerText = `${qIndex + 1}. ${q.q}`;
+        block.appendChild(title);
+
+        q.options.forEach((opt, optIndex) => {
+            const optBtn = document.createElement('button');
+            optBtn.className = 'option-btn';
+            optBtn.innerText = opt;
+            optBtn.onclick = () => checkAnswer(optBtn, block, optIndex, q.answer);
+            block.appendChild(optBtn);
+        });
+        container.appendChild(block);
+    });
+    window.scrollTo(0,0);
+}
+
+function checkAnswer(btn, block, selectedIndex, correctIndex) {
+    const buttons = block.querySelectorAll('.option-btn');
+    buttons.forEach(b => b.disabled = true);
+    questionsAnswered++;
+
+    if (selectedIndex === correctIndex) {
+        btn.classList.add('selected-correct');
+        btn.innerText = "✅ " + btn.innerText;
+        correctAnswers++;
+    } else {
+        btn.classList.add('selected-wrong');
+        btn.innerText = "❌ " + btn.innerText;
+        buttons[correctIndex].classList.add('selected-correct'); 
+    }
+    if (questionsAnswered === totalQuestions) {
+        showResults();
+    }
+}
+
+function showResults() {
+    const resultsSection = document.getElementById('results-section');
+    const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+    const wrongAnswers = totalQuestions - correctAnswers;
+
+    document.getElementById('score-percentage').innerText = `${percentage}%`;
+    document.getElementById('score-correct').innerText = correctAnswers;
+    document.getElementById('score-wrong').innerText = wrongAnswers;
+    document.getElementById('score-total').innerText = totalQuestions;
+
+    const percentageElement = document.getElementById('score-percentage');
+    if (percentage >= 80) {
+        percentageElement.style.color = 'var(--correct)';
+    } else if (percentage >= 50) {
+        percentageElement.style.color = '#eab308';
+    } else {
+        percentageElement.style.color = 'var(--wrong)';
+    }
+
+    resultsSection.style.display = 'block';
+    setTimeout(() => {
+        resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }, 300);
+}
+
+function playAudio() {
+    currentAudio.play().catch(e => {
+        alert("Failed to load audio from:\n" + currentAudio.src + "\n\nError: " + e.message);
+    });
+    isPlaying = true;
+}
+
+function stopAudio() {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    isPlaying = false;
+}
+
+function goHome() {
+    stopAudio();
+    document.getElementById('quiz-screen').classList.remove('active');
+    document.getElementById('home-screen').classList.add('active');
+}
+</script>
+</body>
+</html>
